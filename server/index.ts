@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
 import { aiAssist, aiSubtitles, aiAvailable } from "./ai.ts";
 import { claudeStatus, findClaude, getConfig, saveConfig, type Config } from "./config.ts";
+import { registerImport } from "./importer.ts";
 
 const has = (bin: string, arg = "-version") => {
   try {
@@ -169,26 +170,7 @@ export function createApp(opts: { staticDir?: string } = {}) {
     }
   });
 
-  /** converts photos browsers can't show (HEIC from iPhone, TIFF…) to JPEG */
-  app.post("/api/image", express.raw({ type: () => true, limit: "300mb" }), async (req, res) => {
-    const body = req.body as Buffer;
-    if (!Buffer.isBuffer(body) || !body.length) return void res.status(400).json({ error: "empty upload" });
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-img-"));
-    const ext = String(req.query.ext ?? "heic").replace(/[^a-z0-9]/gi, "").slice(0, 5) || "bin";
-    const input = path.join(dir, `in.${ext}`);
-    const output = path.join(dir, "out.jpg");
-    fs.writeFileSync(input, body);
-    try {
-      if (process.platform === "darwin") await run("/usr/bin/sips", ["-s", "format", "jpeg", "-s", "formatOptions", "92", input, "--out", output]);
-      else if (FFMPEG) await run(FFMPEG, ["-y", "-i", input, "-q:v", "2", output]);
-      else throw new Error("no image converter available");
-      res.setHeader("Content-Type", "image/jpeg");
-      res.sendFile(output, () => fs.rmSync(dir, { recursive: true, force: true }));
-    } catch (e) {
-      fs.rmSync(dir, { recursive: true, force: true });
-      res.status(500).json({ error: errMsg(e) });
-    }
-  });
+  registerImport(app, FFMPEG);
 
   /** local speech-to-text with the openai-whisper CLI, if installed */
   app.post("/api/transcribe", express.raw({ type: () => true, limit: "1gb" }), async (req, res) => {

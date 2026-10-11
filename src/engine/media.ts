@@ -59,65 +59,122 @@ export function getSvgImage(svg: string): HTMLImageElement {
 }
 
 /** ------------ import ------------ */
+
+// what Chromium plays natively; everything else goes through the local engine (ffmpeg / sips)
+const NATIVE: Record<MediaItem["kind"], RegExp> = {
+  video: /\.(mp4|m4v|mov|webm)$/i,
+  audio: /\.(mp3|wav|ogg|oga|opus|m4a|aac|flac|weba)$/i,
+  image: /\.(png|jpe?g|jfif|gif|webp|svg|bmp|avif|ico)$/i,
+};
+const EXT: Record<MediaItem["kind"], RegExp> = {
+  video: /\.(mp4|m4v|mov|qt|webm|mkv|avi|wmv|asf|flv|f4v|mpg|mpeg|mpe|m1v|m2v|m2p|m2ts|mts|ts|m2t|tod|mod|vob|3gp|3g2|ogv|mxf|divx|xvid|rm|rmvb|dv|y4m|hevc|h264|264|265|nut|amv|mjpeg|gifv|dvr-ms|wtv|bik)$/i,
+  audio: /\.(mp3|wav|ogg|oga|opus|m4a|aac|flac|weba|wma|aif|aiff|aifc|ac3|eac3|dts|amr|awb|ape|caf|alac|mka|au|snd|ra|wv|tta|mpc|mp2|m4b|m4r|w64|voc|gsm|spx|mid|midi)$/i,
+  image: /\.(png|jpe?g|jfif|gif|webp|svg|bmp|avif|ico|heic|heif|tiff?|psd|tga|exr|jp2|j2k|jxl|cr2|cr3|nef|nrw|arw|srf|sr2|dng|orf|rw2|raf|pef|srw|x3f|3fr|erf|kdc|mrw|raw|rwl|iiq|pcx|ppm|pgm|pbm|hdr|dds|icns|pict|pct|sgi)$/i,
+};
+
+export const ACCEPTED_FORMATS_HINT =
+  "Video: MP4, MOV, MKV, AVI, WMV, FLV, MPEG, MTS/M2TS, WebM, 3GP, MXF, ProRes, HEVC… · Audio: MP3, WAV, FLAC, AAC, M4A, OGG, WMA, AIFF, AC3, OPUS… · Photos: JPG, PNG, HEIC, RAW (CR2/NEF/ARW/DNG…), PSD, TIFF, WebP, GIF, SVG…";
+
 const kindOf = (type: string, name: string): MediaItem["kind"] | null => {
-  if (type.startsWith("video/") || /\.(mp4|mov|webm|mkv|m4v)$/i.test(name)) return "video";
-  if (type.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name)) return "audio";
-  if (type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp|heic|heif|tiff?|avif)$/i.test(name)) return "image";
+  for (const k of ["video", "audio", "image"] as const) if (EXT[k].test(name)) return k;
+  if (type.startsWith("video/")) return "video";
+  if (type.startsWith("audio/")) return "audio";
+  if (type.startsWith("image/")) return "image";
   return null;
 };
 
-export async function importFile(file: Blob & { name?: string }, id = uid("med"), knownName?: string): Promise<MediaItem | null> {
+export type ImportProgress = (stage: string, progress: number) => void;
+
+const MIME: Record<string, string> = { mp4: "video/mp4", flac: "audio/flac", jpg: "image/jpeg", png: "image/png" };
+
+/** converts any file on the local engine; returns a browser-playable blob */
+async function convertOnEngine(file: Blob, name: string, force: boolean, onProgress?: ImportProgress) {
+  onProgress?.("Sending to converter", 0);
+  const res = await fetch(`/api/import?name=${encodeURIComponent(name)}${force ? "&force=1" : ""}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: file,
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Converter is not available");
+  const { id } = await res.json();
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 350));
+    const st = await (await fetch(`/api/import/${id}`)).json();
+    if (st.status === "error") throw new Error(st.error ?? "Conversion failed");
+    onProgress?.(st.stage, st.progress);
+    if (st.status === "done") {
+      const out = await fetch(`/api/import/${id}/file`);
+      const ext = String(st.name).split(".").pop()!.toLowerCase();
+      const blob = new Blob([await out.blob()], { type: MIME[ext] ?? "application/octet-stream" });
+      return { blob, name: st.name as string, kind: st.kind as MediaItem["kind"], hasAudio: !!st.hasAudio };
+    }
+  }
+}
+
+class NeedsEngine extends Error {}
+
+export async function importFile(file: Blob & { name?: string }, id = uid("med"), knownName?: string, onProgress?: ImportProgress): Promise<MediaItem | null> {
   const name = knownName ?? (file as File).name ?? "media";
-  const kind = kindOf(file.type, name);
-  if (!kind) return null;
+  let kind = kindOf(file.type, name);
+  let src: Blob = file, srcName = name, expectAudio: boolean | undefined;
+  const state: { converted: "" | "remux" | "forced" } = { converted: "" };
+  const viaEngine = async (force: boolean) => {
+    const r = await convertOnEngine(file, name, force, onProgress);
+    src = r.blob;
+    srcName = r.name;
+    kind = r.kind;
+    expectAudio = r.hasAudio;
+    state.converted = force ? "forced" : "remux";
+  };
+  // unknown extension or a format Chromium can't open → convert first
+  if (!kind || !NATIVE[kind].test(name)) await viaEngine(false);
+  for (;;) {
+    try {
+      return await loadMedia(src, id, srcName, kind!, expectAudio);
+    } catch (e) {
+      if (!(e instanceof NeedsEngine) || state.converted === "forced") throw e instanceof NeedsEngine ? new Error(`Could not open ${name}`) : e;
+      // native attempt failed (e.g. ProRes .mov, AC-3 audio) or a remux wasn't enough → re-encode
+      await viaEngine(state.converted === "remux");
+    }
+  }
+}
+
+async function loadMedia(file: Blob, id: string, name: string, kind: MediaItem["kind"], expectAudio?: boolean): Promise<MediaItem> {
   const url = URL.createObjectURL(file);
   const item: MediaItem = { id, name, kind, url, duration: 0, width: 0, height: 0, hasAudio: kind !== "image", blob: file };
+  const fail = () => {
+    URL.revokeObjectURL(url);
+    return new NeedsEngine();
+  };
 
   if (kind === "video") {
     const v = document.createElement("video");
     v.muted = true;
     v.preload = "auto";
     v.src = url;
-    await new Promise<void>((res, rej) => {
-      v.onloadedmetadata = () => res();
-      v.onerror = () => rej(new Error("Unsupported video format"));
+    const ok = await new Promise<boolean>((res) => {
+      v.onloadeddata = () => res(true);
+      v.onerror = () => res(false);
+      setTimeout(() => res(v.readyState >= 1), 15000);
     });
+    if (!ok || !v.videoWidth || !isFinite(v.duration)) throw fail();
     item.duration = v.duration;
     item.width = v.videoWidth;
     item.height = v.videoHeight;
     item.thumb = await captureThumb(v, Math.min(1, v.duration / 3));
+    if (expectAudio === undefined && /\.(mp4|m4v|mov)$/i.test(name)) expectAudio = await mp4HasAudio(file);
   } else if (kind === "image") {
-    const decode = async (u: string) => {
-      const img = new Image();
-      img.src = u;
-      await img.decode();
-      return img;
-    };
-    let img: HTMLImageElement | null = null;
-    const needsConvert = /\.(heic|heif|tiff?)$/i.test(name) || /heic|heif|tiff/i.test(file.type);
-    if (!needsConvert) img = await decode(url).catch(() => null);
-    if (!img) {
-      // e.g. iPhone HEIC photos: convert to JPEG on the local engine
-      const res = await fetch(`/api/image?ext=${encodeURIComponent(name.split(".").pop() ?? "")}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/octet-stream" },
-        body: file,
-      });
-      if (!res.ok) throw new Error("This image format is not supported");
-      const jpg = await res.blob();
-      URL.revokeObjectURL(url);
-      item.blob = jpg;
-      item.url = URL.createObjectURL(jpg);
-      item.name = name.replace(/\.\w+$/, ".jpg");
-      img = await decode(item.url);
-    }
-    item.width = img.naturalWidth || 1000;
-    item.height = img.naturalHeight || 1000;
+    const img = new Image();
+    img.src = url;
+    const ok = await img.decode().then(() => true, () => false);
+    if (!ok || !img.naturalWidth) throw fail();
+    item.width = img.naturalWidth;
+    item.height = img.naturalHeight;
     item.duration = 5;
-    item.thumb = item.url;
+    item.thumb = url;
   }
 
-  if (kind !== "image") {
+  if (kind !== "image" && expectAudio !== false) {
     try {
       const buf = await audioEngine.decode(id, await file.arrayBuffer());
       if (kind === "audio") item.duration = buf.duration;
@@ -125,10 +182,32 @@ export async function importFile(file: Blob & { name?: string }, id = uid("med")
       item.peaks = computePeaks(buf, pps);
       item.peaksPerSec = pps;
     } catch {
-      item.hasAudio = false; // video without an audio track
+      // the file has sound we can't decode (e.g. AC-3 / DTS) → let the engine convert it
+      if (kind === "audio" || expectAudio === true) throw fail();
+      item.hasAudio = false;
     }
-  }
+  } else if (kind !== "image") item.hasAudio = false;
   return item;
+}
+
+/** does an MP4/MOV contain an audio track? (avoids treating silent clips as undecodable) */
+async function mp4HasAudio(file: Blob): Promise<boolean | undefined> {
+  const { default: MP4Box } = await import("mp4box");
+  return new Promise((resolve) => {
+    const f = MP4Box.createFile();
+    f.onReady = (info: { audioTracks: unknown[] }) => resolve(info.audioTracks.length > 0);
+    f.onError = () => resolve(undefined);
+    file.arrayBuffer().then((buf) => {
+      (buf as ArrayBuffer & { fileStart: number }).fileStart = 0;
+      try {
+        f.appendBuffer(buf);
+        f.flush();
+      } catch {
+        resolve(undefined);
+      }
+      setTimeout(() => resolve(undefined), 100);
+    });
+  });
 }
 
 async function captureThumb(v: HTMLVideoElement, t: number): Promise<string> {

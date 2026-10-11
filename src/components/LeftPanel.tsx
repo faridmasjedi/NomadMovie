@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useStore, type LeftTab } from "../store";
 import type { Clip, MediaItem } from "../types";
-import { importFile } from "../engine/media";
+import { importFile, ACCEPTED_FORMATS_HINT } from "../engine/media";
 import { saveMedia, deleteMedia } from "../engine/persist";
 import { clipFromMedia, defaultShape, defaultText, makeClip } from "../factory";
 import { SHAPES, SOLID_COLORS, TEXT_STYLES } from "../engine/presets";
@@ -58,7 +58,9 @@ export async function importFiles(files: FileList | File[]) {
   for (const f of Array.from(files)) {
     s.setBusy(`Importing ${f.name}…`);
     try {
-      const m = await importFile(f);
+      const m = await importFile(f, undefined, undefined, (stage, p) =>
+        s.setBusy(`${f.name}: ${stage}${p > 0 && p < 1 ? ` ${Math.round(p * 100)}%` : "…"}`),
+      );
       if (!m) {
         s.notify(`${f.name}: unsupported format`, "error");
         continue;
@@ -108,8 +110,9 @@ function MediaTab() {
       >
         <div style={{ fontSize: 26 }}>⬆</div>
         Drop video, audio or image files here
-        <div className="hint">or click to browse · MP4, MOV, WebM, MP3, WAV, JPG, PNG, HEIC, TIFF, SVG…</div>
-        <input ref={input} type="file" multiple accept="video/*,audio/*,image/*,.heic,.heif,.tif,.tiff" hidden onChange={(e) => e.target.files && importFiles(e.target.files)} />
+        <div className="hint">or click to browse — any video, audio or photo format</div>
+        <div className="hint" style={{ fontSize: 10.5, marginTop: 4 }}>{ACCEPTED_FORMATS_HINT}</div>
+        <input ref={input} type="file" multiple hidden onChange={(e) => { if (e.target.files) importFiles(e.target.files); e.target.value = ""; }} />
       </div>
       <div className="row" style={{ marginBottom: 10, gap: 6 }}>
         <button onClick={() => photoInput.current?.click()}>🖼 Import photos</button>
@@ -127,7 +130,7 @@ function MediaTab() {
         >
           🎞 Photo slideshow
         </button>
-        <input ref={photoInput} type="file" multiple accept="image/*,.heic,.heif,.tif,.tiff" hidden onChange={(e) => e.target.files && importFiles(e.target.files)} />
+        <input ref={photoInput} type="file" multiple accept="image/*,.heic,.heif,.tif,.tiff,.psd,.cr2,.cr3,.nef,.arw,.dng,.orf,.rw2,.raf,.raw" hidden onChange={(e) => { if (e.target.files) importFiles(e.target.files); e.target.value = ""; }} />
       </div>
       <div className="chips" style={{ marginBottom: 10 }}>
         {(["all", "video", "audio", "image"] as const).map((k) => (
