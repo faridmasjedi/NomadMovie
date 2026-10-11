@@ -1,0 +1,80 @@
+{
+  "name": "nova-editor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server/index.ts",
+    "build": "tsc --noEmit && vite build",
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build:electron": "esbuild electron/main.ts --bundle --platform=node --format=esm --packages=external --target=node20 --outfile=dist-electron/main.mjs",
+    "app": "npm run build && npm run build:electron && electron .",
+    "dist": "npm run build && npm run build:electron && electron-builder --mac --publish never"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "express": "^4.21.2",
+    "ffmpeg-static": "^5.2.0"
+  },
+  "devDependencies": {
+    "@fontsource/bebas-neue": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/lalezar": "^5.3.0",
+    "@fontsource/montserrat": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "@fontsource/roboto-mono": "^5.3.0",
+    "@fontsource/vazirmatn": "^5.3.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^26.6.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.28.2",
+    "mp4-muxer": "^5.1.5",
+    "mp4box": "^0.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "zustand": "^4.5.5"
+  },
+  "productName": "Nova Editor",
+  "description": "AI-powered video editor and motion graphics app",
+  "author": "Farid Masjedi",
+  "main": "dist-electron/main.mjs",
+  "build": {
+    "appId": "com.faridmasjedi.nova-editor",
+    "productName": "Nova Editor",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "target": [
+        "dir",
+        "dmg"
+      ],
+      "identity": null,
+      "icon": "build/icon.png",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Nova Editor uses the microphone to record voice-overs."
+      }
+    },
+    "dmg": {
+      "title": "Nova Editor"
+    }
+  }
+}
