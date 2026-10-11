@@ -1,9 +1,22 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useStore } from "../store";
 
-export function Section({ title, children, defaultOpen = true, right }: { title: string; children: ReactNode; defaultOpen?: boolean; right?: ReactNode }) {
+/** collapsible inspector section; `fid` lets the timeline jump here (opens, scrolls and flashes it) */
+export function Section({ title, children, defaultOpen = true, right, fid }: { title: string; children: ReactNode; defaultOpen?: boolean; right?: ReactNode; fid?: string }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [flash, setFlash] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const focus = useStore((s) => s.focus);
+  useEffect(() => {
+    if (!fid || !focus || focus.key !== fid || Date.now() - focus.at > 1500) return;
+    setOpen(true);
+    setFlash(true);
+    requestAnimationFrame(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    const t = setTimeout(() => setFlash(false), 1400);
+    return () => clearTimeout(t);
+  }, [focus, fid]);
   return (
-    <div className="section">
+    <div className={`section ${flash ? "flash" : ""}`} ref={ref}>
       <div className="section-head" onClick={() => setOpen(!open)}>
         <span className={`chev ${open ? "open" : ""}`}>›</span>
         <span>{title}</span>

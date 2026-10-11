@@ -1,6 +1,9 @@
 import type { Clip, Effect, MediaItem, Project, ShapeProps, TextProps } from "../types";
 import { frameState, type FrameState } from "./animate";
 import { getImage, getSvgImage, getVideo, pauseVideosExcept } from "./media";
+import { trackOp, isVisibleAt } from "./timeline";
+import { runTransition, runEffect } from "./gl";
+import { effectDef, hexToRgb } from "./effectsLib";
 
 export interface Bounds {
   x: number;
@@ -54,14 +57,14 @@ export async function prepareVideosAt(p: Project, media: Record<string, MediaIte
   const waits: Promise<void>[] = [];
   for (const c of p.clips) {
     if (skip?.has(c.id)) continue;
-    if (c.kind !== "video" || t < c.start || t >= c.start + c.duration || !c.mediaId) continue;
+    if (c.kind !== "video" || !c.mediaId || !isVisibleAt(p, c, t)) continue;
     const tr = p.tracks.find((x) => x.id === c.trackId);
     if (!tr || tr.hidden) continue;
     const m = media[c.mediaId];
     if (!m) continue;
     const v = getVideo(c.id, m.url);
     if (!v.paused) v.pause();
-    const target = Math.min(c.offset + (t - c.start) * c.speed, Math.max(0, m.duration - 0.001));
+    const target = Math.min(Math.max(0, c.offset + (t - c.start) * c.speed), Math.max(0, m.duration - 0.001));
     if (Math.abs(v.currentTime - target) < 1e-4 && v.readyState >= 2 && !v.seeking) continue;
     waits.push(
       new Promise<void>((resolve) => {
@@ -81,6 +84,21 @@ export async function prepareVideosAt(p: Project, media: Record<string, MediaIte
 
 export function activeClipsAt(p: Project, t: number) {
   return p.clips.filter((c) => t >= c.start && t < c.start + c.duration);
+}
+
+const layerA = document.createElement("canvas");
+const layerACtx = layerA.getContext("2d")!;
+const layerB = document.createElement("canvas");
+const layerBCtx = layerB.getContext("2d")!;
+
+/** copies the work layer into `dst`, baking in opacity */
+function stash(dst: HTMLCanvasElement, dctx: CanvasRenderingContext2D, opacity: number) {
+  ensureSize(dst, layerCanvas.width, layerCanvas.height);
+  dctx.globalAlpha = 1;
+  dctx.clearRect(0, 0, dst.width, dst.height);
+  dctx.globalAlpha = Math.min(1, opacity);
+  dctx.drawImage(layerCanvas, 0, 0);
+  dctx.globalAlpha = 1;
 }
 
 export function renderFrame(ctx: CanvasRenderingContext2D, p: Project, media: Record<string, MediaItem>, t: number, opts: RenderOpts) {
@@ -103,14 +121,68 @@ export function renderFrame(ctx: CanvasRenderingContext2D, p: Project, media: Re
   for (let ti = tracks.length - 1; ti >= 0; ti--) {
     const tr = tracks[ti];
     if (tr.hidden) continue;
-    for (const c of p.clips) {
-      if (c.trackId !== tr.id || t < c.start || t >= c.start + c.duration) continue;
+    const op = trackOp(p, tr.id, t);
+    if (!op) continue;
+    if (op.kind === "single") {
+      const c = op.c;
       if (c.kind === "video") activeVideo.add(c.id);
-      drawClip(ctx, c, p, media, t - c.start, opts, scale);
+      if (c.kind === "adjustment") {
+        applyAdjustment(ctx, c, p, t - c.start, scale);
+        continue;
+      }
+      const r = paintClip(c, p, media, t - c.start, opts, scale);
+      if (!r) continue;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, r.opacity);
+      ctx.globalCompositeOperation = c.blend;
+      ctx.drawImage(layerCanvas, 0, 0);
+      ctx.restore();
+      continue;
     }
+    // transition between two clips (either side may be empty)
+    for (const c of [op.a, op.b]) if (c?.kind === "video") activeVideo.add(c.id);
+    const ra = op.a && op.a.kind !== "adjustment" ? paintClip(op.a, p, media, t - op.a.start, opts, scale) : null;
+    stash(layerA, layerACtx, ra ? ra.opacity : 0);
+    if (!ra) layerACtx.clearRect(0, 0, layerA.width, layerA.height);
+    const rb = op.b && op.b.kind !== "adjustment" ? paintClip(op.b, p, media, t - op.b.start, opts, scale) : null;
+    stash(layerB, layerBCtx, rb ? rb.opacity : 0);
+    if (!rb) layerBCtx.clearRect(0, 0, layerB.width, layerB.height);
+    const progress = Math.min(1, Math.max(0, op.p));
+    const out = runTransition(op.def.source, layerA, layerB, cw, ch, progress, op.def.params);
+    ctx.save();
+    ctx.globalCompositeOperation = (op.b ?? op.a)!.blend;
+    if (out) ctx.drawImage(out, 0, 0);
+    else {
+      // no WebGL: plain cross-fade
+      ctx.globalAlpha = 1 - progress;
+      ctx.drawImage(layerA, 0, 0);
+      ctx.globalAlpha = progress;
+      ctx.drawImage(layerB, 0, 0);
+    }
+    ctx.restore();
   }
   pauseVideosExcept(activeVideo);
   ctx.restore();
+}
+
+/** effect layer: re-processes everything rendered below it */
+function applyAdjustment(out: CanvasRenderingContext2D, c: Clip, p: Project, local: number, scale: number) {
+  const s = frameState(c, Math.min(Math.max(local, 0), c.duration), p.width, p.height);
+  const L = layer;
+  L.setTransform(1, 0, 0, 1, 0, 0);
+  L.globalAlpha = 1;
+  L.globalCompositeOperation = "source-over";
+  L.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
+  L.filter = cssFilter(c, s, scale);
+  L.drawImage(out.canvas, 0, 0);
+  L.filter = "none";
+  postProcess(c, c.start + local, local, scale);
+  out.save();
+  out.setTransform(1, 0, 0, 1, 0, 0);
+  out.globalAlpha = Math.min(1, s.opacity);
+  out.globalCompositeOperation = "source-over";
+  out.drawImage(layerCanvas, 0, 0);
+  out.restore();
 }
 
 function cssFilter(c: Clip, s: FrameState, scale: number) {
@@ -129,10 +201,10 @@ function cssFilter(c: Clip, s: FrameState, scale: number) {
   return parts.length ? parts.join(" ") : "none";
 }
 
-function contentSize(c: Clip, m: MediaItem | undefined, W: number, H: number): [number, number] {
+export function contentSize(c: Clip, m: MediaItem | undefined, W: number, H: number): [number, number] {
   if (c.kind === "text" && c.text) return measureText(c.text);
   if (c.kind === "shape" && c.shape) return [c.shape.width, c.shape.height];
-  if (c.kind === "solid") return [W, H];
+  if (c.kind === "solid" || c.kind === "adjustment") return [W, H];
   let iw = m?.width || W, ih = m?.height || H;
   if (c.svg) {
     const img = getSvgImage(c.svg);
@@ -146,14 +218,18 @@ function contentSize(c: Clip, m: MediaItem | undefined, W: number, H: number): [
   return [iw * k * cw, ih * k * chh];
 }
 
-function drawClip(out: CanvasRenderingContext2D, c: Clip, p: Project, media: Record<string, MediaItem>, local: number, opts: RenderOpts, scale: number) {
+/** paints one clip (with its filters and effects) into the work layer; returns composite settings */
+function paintClip(c: Clip, p: Project, media: Record<string, MediaItem>, local: number, opts: RenderOpts, scale: number) {
   const W = p.width, H = p.height;
   const m = c.mediaId ? media[c.mediaId] : undefined;
-  const s = frameState(c, local, W, H);
+  // outside the clip (during a transition overlap) hold the first/last state
+  const fl = Math.min(Math.max(local, 0), Math.max(0, c.duration - 1e-4));
+  const s = frameState(c, fl, W, H);
   const t = c.start + local;
 
   // time-based effects that modify the transform
   for (const e of c.effects) {
+    if (e.enabled === false) continue;
     const a = e.amount / 100;
     if (e.type === "shake") {
       s.x += (noise(t * 30, 1) - 0.5) * 60 * a;
@@ -167,10 +243,10 @@ function drawClip(out: CanvasRenderingContext2D, c: Clip, p: Project, media: Rec
       if (noise(Math.floor(t * 20), 4) < a * 0.5) s.opacity *= 0.55;
     }
   }
-  if (s.opacity <= 0.001 || s.sx === 0 || s.sy === 0) return;
+  if (s.opacity <= 0.001 || s.sx === 0 || s.sy === 0) return null;
 
   const [w, h] = contentSize(c, m, W, H);
-  lastBounds.set(c.id, { x: s.x, y: s.y, w, h, sx: s.sx, sy: s.sy, rotation: s.rotation });
+  if (local >= 0 && local < c.duration) lastBounds.set(c.id, { x: s.x, y: s.y, w, h, sx: s.sx, sy: s.sy, rotation: s.rotation });
 
   // ---- draw into the layer
   const L = layer;
@@ -181,15 +257,6 @@ function drawClip(out: CanvasRenderingContext2D, c: Clip, p: Project, media: Rec
   L.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
   L.save();
   L.scale(scale, scale);
-  if (s.wipe) {
-    L.beginPath();
-    if ("circle" in s.wipe) {
-      L.arc(W / 2, H / 2, Math.hypot(W, H) / 2 * s.wipe.circle, 0, Math.PI * 2);
-    } else if (s.wipe.dir === "left") L.rect(W * (1 - s.wipe.p), 0, W * s.wipe.p, H);
-    else if (s.wipe.dir === "right") L.rect(0, 0, W * s.wipe.p, H);
-    else L.rect(0, H * (1 - s.wipe.p), W, H * s.wipe.p);
-    L.clip();
-  }
   L.translate(s.x, s.y);
   L.rotate((s.rotation * Math.PI) / 180);
   L.scale(s.sx, s.sy);
@@ -204,7 +271,7 @@ function drawClip(out: CanvasRenderingContext2D, c: Clip, p: Project, media: Rec
         break;
       }
       const v = getVideo(c.id, m.url);
-      syncVideo(v, c, local, opts);
+      syncVideo(v, c, local, opts, m.duration);
       if (v.readyState >= 2) drawMedia(L, v, c, w, h, v.videoWidth, v.videoHeight);
       break;
     }
@@ -226,9 +293,15 @@ function drawClip(out: CanvasRenderingContext2D, c: Clip, p: Project, media: Rec
   }
   L.restore();
 
-  // ---- pixel / layer effects
-  const f = c.filters;
   if (c.chroma.enabled && (c.kind === "video" || c.kind === "image")) chromaKey(c);
+  postProcess(c, t, local, scale);
+  return { opacity: s.opacity };
+}
+
+/** color filters that need compositing + all layer effects (canvas and GPU) */
+function postProcess(c: Clip, t: number, local: number, scale: number) {
+  const L = layer;
+  const f = c.filters;
   if (f.temperature || f.tint) {
     L.save();
     L.globalCompositeOperation = "source-atop";
@@ -253,13 +326,30 @@ function drawClip(out: CanvasRenderingContext2D, c: Clip, p: Project, media: Rec
     L.fillRect(0, 0, cw, chh);
     L.restore();
   }
-  for (const e of c.effects) applyLayerEffect(e, t, scale);
-
-  out.save();
-  out.globalAlpha = Math.min(1, s.opacity);
-  out.globalCompositeOperation = c.blend;
-  out.drawImage(layerCanvas, 0, 0);
-  out.restore();
+  for (const e of c.effects) {
+    if (e.enabled === false) continue;
+    const def = effectDef(e.type);
+    if (!def) {
+      applyLayerEffect(e, t, scale);
+      continue;
+    }
+    const pr = e.params ?? {};
+    const res = runEffect(def, layerCanvas, layerCanvas.width, layerCanvas.height, {
+      time: Math.max(0, local),
+      amount: e.amount / 100,
+      p1: pr.p1 ?? def.params?.find((x) => x.key === "p1")?.def,
+      p2: pr.p2 ?? def.params?.find((x) => x.key === "p2")?.def,
+      p3: pr.p3 ?? def.params?.find((x) => x.key === "p3")?.def,
+      color1: hexToRgb(pr.color1 ?? def.colors?.find((x) => x.key === "color1")?.def ?? "#ff4d9a"),
+      color2: hexToRgb(pr.color2 ?? def.colors?.find((x) => x.key === "color2")?.def ?? "#2233ee"),
+    });
+    if (!res) continue;
+    L.save();
+    L.setTransform(1, 0, 0, 1, 0, 0);
+    L.globalCompositeOperation = "copy";
+    L.drawImage(res, 0, 0);
+    L.restore();
+  }
 }
 
 function drawMedia(L: CanvasRenderingContext2D, src: CanvasImageSource, c: Clip, w: number, h: number, iw: number, ih: number) {
@@ -270,8 +360,8 @@ function drawMedia(L: CanvasRenderingContext2D, src: CanvasImageSource, c: Clip,
   L.drawImage(src, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
 }
 
-function syncVideo(v: HTMLVideoElement, c: Clip, local: number, opts: RenderOpts) {
-  const target = c.offset + local * c.speed;
+function syncVideo(v: HTMLVideoElement, c: Clip, local: number, opts: RenderOpts, mediaDur: number) {
+  const target = Math.min(Math.max(0, c.offset + local * c.speed), Math.max(0, mediaDur - 0.04));
   if (opts.exporting && !opts.playing) return; // the frame exporter seeks videos itself, exactly
   if (opts.playing) {
     v.playbackRate = c.speed;

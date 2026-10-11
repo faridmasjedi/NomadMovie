@@ -3,6 +3,9 @@ import { detectBeats, detectScenes, normalizeGain, soundSegments } from "../engi
 import { uid, makeClip, defaultText } from "../factory";
 import type { Clip, Keyframe } from "../types";
 import { audioEngine, encodeWav } from "../engine/audio";
+import { getVideo, importFile } from "../engine/media";
+import { saveMedia } from "../engine/persist";
+import { applyMotion } from "../engine/motion";
 
 const S = () => useStore.getState();
 
@@ -147,4 +150,58 @@ export function captionsToSrt(clips: Clip[]) {
     .sort((a, b) => a.start - b.start)
     .map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.start + c.duration)}\n${c.text!.content}\n`)
     .join("\n");
+}
+
+/** inserts a 2-second still of the current frame at the playhead (ripples the track) */
+export async function freezeFrame(clipId: string, seconds = 2) {
+  const st = S();
+  const c = getClip(clipId);
+  const m = c?.mediaId ? st.media[c.mediaId] : undefined;
+  if (!c || !m || c.kind !== "video") throw new Error("Select a video clip");
+  const t = st.currentTime;
+  if (t <= c.start || t >= c.start + c.duration) throw new Error("Move the playhead over the clip first");
+  const v = getVideo(c.id, m.url);
+  const target = c.offset + (t - c.start) * c.speed;
+  if (Math.abs(v.currentTime - target) > 0.01) {
+    await new Promise<void>((r) => {
+      v.addEventListener("seeked", () => r(), { once: true });
+      v.currentTime = target;
+    });
+  }
+  const cv = document.createElement("canvas");
+  cv.width = v.videoWidth;
+  cv.height = v.videoHeight;
+  cv.getContext("2d")!.drawImage(v, 0, 0);
+  const blob = await new Promise<Blob>((r) => cv.toBlob((b) => r(b!), "image/png"));
+  const item = await importFile(new File([blob], `${m.name.replace(/\.\w+$/, "")} freeze ${t.toFixed(2)}s.png`, { type: "image/png" }));
+  if (!item) throw new Error("Could not capture the frame");
+  st.addMedia(item);
+  saveMedia(item).catch(() => {});
+  st.splitAt(t, [c.id]);
+  S().commit((p) => {
+    for (const x of p.clips) if (x.trackId === c.trackId && x.start >= t - 1e-3) x.start += seconds;
+    const still = makeClip(p, "image", c.trackId, t, seconds, {
+      mediaId: item.id, name: "Freeze frame", transform: structuredClone(c.transform), filters: structuredClone(c.filters),
+      fit: c.fit, crop: structuredClone(c.crop), effects: structuredClone(c.effects),
+    });
+    p.clips.push(still);
+  });
+}
+
+/** puts images one after another with a cross dissolve and a gentle Ken Burns move */
+export function photoSlideshow(mediaIds: string[], seconds = 3, transition = "fade") {
+  const st = S();
+  const items = mediaIds.map((id) => st.media[id]).filter((m) => m?.kind === "image");
+  if (!items.length) throw new Error("No photos selected");
+  const start = st.project.clips.filter((c) => c.kind !== "audio").reduce((mx, c) => Math.max(mx, c.start + c.duration), 0);
+  const trackId = st.ensureTrackFor("video", start, items.length * seconds);
+  S().commit((p) => {
+    items.forEach((m, i) => {
+      const c = makeClip(p, "image", trackId, start + i * seconds, seconds, { mediaId: m.id, name: m.name, fit: "cover" });
+      if (i > 0) c.transitionIn = { type: transition, duration: Math.min(1, seconds / 3) };
+      applyMotion(c, p, { preset: i % 2 ? "zoomOut" : "zoomIn", start: 0, duration: seconds, amount: 1.12, focusX: p.width / 2, focusY: p.height / 2, ease: "linear" });
+      p.clips.push(c);
+    });
+  });
+  return items.length;
 }

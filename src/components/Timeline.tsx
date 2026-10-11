@@ -4,12 +4,14 @@ import type { Clip, MediaItem, Track } from "../types";
 import { clipFromMedia, projectDuration, uid } from "../factory";
 import { seek, pause } from "../engine/playback";
 import { Icon, I } from "./ui";
+import { AudioLine, TransitionBadges, addEffectLayer, applyFxToClip, effectLabel, hasFx, readFx, showClipMenu } from "./timelineParts";
 
-const TRACK_H = { video: 62, audio: 50 };
+const TRACK_H = { video: 74, audio: 64 };
 const KIND_COLOR: Record<Clip["kind"], string> = {
   video: "var(--video)", audio: "var(--audio)", image: "#5468c9", text: "var(--text-clip)", shape: "var(--shape)", solid: "#56607a",
+  adjustment: "linear-gradient(135deg, #6a3df0, #c4569f)",
 };
-const KIND_ICON: Record<Clip["kind"], string> = { video: "🎬", audio: "🎵", image: "🖼", text: "T", shape: "◆", solid: "■" };
+const KIND_ICON: Record<Clip["kind"], string> = { video: "🎬", audio: "🎵", image: "🖼", text: "T", shape: "◆", solid: "■", adjustment: "✨" };
 
 export function Timeline() {
   const project = useStore((s) => s.project);
@@ -173,6 +175,13 @@ export function Timeline() {
   const onDrop = (e: React.DragEvent, track: Track) => {
     e.preventDefault();
     setDropTrack(null);
+    const fx = readFx(e);
+    if (fx) {
+      // dropped on an empty spot of a lane
+      if (fx.kind === "effect" || fx.kind === "look") addEffectLayer(fx, snap(xToTime(e.clientX), []).t, track.id);
+      else st().notify("Drop transitions and animations onto a clip", "info");
+      return;
+    }
     const id = e.dataTransfer.getData("nova/media");
     const m = st().media[id];
     if (!m) return;
@@ -250,8 +259,9 @@ export function Timeline() {
                 {project.clips
                   .filter((c) => c.trackId === t.id)
                   .map((c) => (
-                    <ClipView key={c.id} c={c} zoom={zoom} sel={selected.includes(c.id)} m={c.mediaId ? media[c.mediaId] : undefined} onDown={onClipDown} />
+                    <ClipView key={c.id} c={c} zoom={zoom} sel={selected.includes(c.id)} m={c.mediaId ? media[c.mediaId] : undefined} onDown={onClipDown} h={TRACK_H[t.kind] - 6} />
                   ))}
+                {t.kind === "video" && <TransitionBadges p={project} trackId={t.id} zoom={zoom} />}
               </div>
             ))}
             <div style={{ height: 40 }} />
@@ -360,37 +370,76 @@ function Ruler({ width, zoom, onDown, fps }: { width: number; zoom: number; onDo
 }
 
 const ClipView = memo(function ClipView({
-  c, zoom, sel, m, onDown,
+  c, zoom, sel, m, onDown, h,
 }: {
-  c: Clip; zoom: number; sel: boolean; m?: MediaItem;
+  c: Clip; zoom: number; sel: boolean; m?: MediaItem; h: number;
   onDown: (e: React.PointerEvent, c: Clip, mode: "move" | "l" | "r") => void;
 }) {
+  const [drop, setDrop] = useState<null | "l" | "m" | "r">(null);
   const w = Math.max(4, c.duration * zoom);
-  const kfTimes = Array.from(new Set(Object.values(c.keyframes).flatMap((k) => k!.map((f) => f.t))));
+  const kfTimes = Array.from(new Set(Object.entries(c.keyframes).filter(([k]) => k !== "volume").flatMap(([, k]) => k!.map((f) => f.t))));
   const label = c.kind === "text" ? c.text?.content.split("\n")[0] : c.name;
+  const sound = (c.kind === "audio" || c.kind === "video") && !!m?.hasAudio;
+  const relOf = (e: React.DragEvent) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return (e.clientX - r.left) / Math.max(1, r.width);
+  };
   return (
     <div
-      className={`clip ${sel ? "sel" : ""}`}
+      className={`clip ${sel ? "sel" : ""} ${drop ? `drop-${drop}` : ""}`}
       style={{ left: c.start * zoom, width: w, background: KIND_COLOR[c.kind] }}
       onPointerDown={(e) => onDown(e, c, "move")}
-      title={`${c.name} — ${c.duration.toFixed(2)}s`}
+      onContextMenu={(e) => showClipMenu(e, c, m)}
+      onDragOver={(e) => {
+        if (!hasFx(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rel = relOf(e);
+        setDrop(rel < 0.4 ? "l" : rel > 0.6 ? "r" : "m");
+      }}
+      onDragLeave={() => setDrop(null)}
+      onDrop={(e) => {
+        const fx = readFx(e);
+        setDrop(null);
+        if (!fx) return;
+        e.preventDefault();
+        e.stopPropagation();
+        applyFxToClip(c.id, fx, relOf(e));
+      }}
+      title={`${c.name} — ${c.duration.toFixed(2)}s · right-click for options`}
     >
       {m?.thumb && (c.kind === "video" || c.kind === "image") && <div className="strip" style={{ backgroundImage: `url(${m.thumb})` }} />}
-      {m?.peaks && (c.kind === "audio" || c.kind === "video") && <Wave c={c} m={m} w={w} />}
-      {c.transitionIn.type !== "none" && <div className="tr-in" style={{ width: c.transitionIn.duration * zoom }} />}
-      {c.transitionOut.type !== "none" && <div className="tr-out" style={{ right: 0, width: c.transitionOut.duration * zoom }} />}
+      {m?.peaks && sound && <Wave c={c} m={m} w={w} />}
       <div className="label">
         {KIND_ICON[c.kind]} {label}
         {c.speed !== 1 ? `  ×${c.speed}` : ""}
+        {c.audio.muted && sound ? "  🔇" : ""}
       </div>
       <div className="fx-badges">
-        {c.effects.length > 0 && <span>FX</span>}
-        {(c.animIn !== "none" || c.animOut !== "none") && <span>ANIM</span>}
-        {c.audio.muted && <span>🔇</span>}
+        {c.effects.map((e) => (
+          <span
+            key={e.type}
+            className={`fx-chip ${e.enabled === false ? "off" : ""}`}
+            title="Click to edit this effect"
+            onPointerDown={(ev) => {
+              ev.stopPropagation();
+              useStore.getState().focusClip(c.id, "fx", e.type);
+            }}
+          >
+            ✨ {effectLabel(e.type)}
+          </span>
+        ))}
+        {(c.animIn !== "none" || c.animOut !== "none") && (
+          <span className="fx-chip" onPointerDown={(ev) => { ev.stopPropagation(); useStore.getState().focusClip(c.id, "anim", "animIn"); }}>ANIM</span>
+        )}
+        {(c.keyframes.scale || c.keyframes.x) && (
+          <span className="fx-chip" onPointerDown={(ev) => { ev.stopPropagation(); useStore.getState().focusClip(c.id, "anim", "motion"); }}>🎥 Motion</span>
+        )}
       </div>
       {kfTimes.map((t) => (
         <div key={t} className="kf" style={{ left: t * zoom - 3.5 }} />
       ))}
+      {sound && <AudioLine c={c} w={w} h={h} zoom={zoom} top={c.kind === "audio" ? 18 : Math.round(h * 0.45)} />}
       <div className="trim l" onPointerDown={(e) => onDown(e, c, "l")} />
       <div className="trim r" onPointerDown={(e) => onDown(e, c, "r")} />
     </div>
@@ -418,5 +467,5 @@ function Wave({ c, m, w }: { c: Clip; m: MediaItem; w: number }) {
       g.fillRect(x, ch - h, 1, h);
     }
   }, [c.offset, c.duration, c.speed, c.audio.volume, c.audio.muted, m.peaks, w]);
-  return <canvas ref={ref} className="wave" style={{ height: c.kind === "audio" ? "70%" : "40%" }} />;
+  return <canvas ref={ref} className="wave" style={{ height: c.kind === "audio" ? "72%" : "50%" }} />;
 }

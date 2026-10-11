@@ -14,7 +14,7 @@ export interface Config {
 }
 
 /** resolved lazily so the desktop app can point it at its userData folder before first use */
-const dataDir = () => process.env.NOVA_DATA_DIR ?? path.join(os.homedir(), ".nova-editor");
+const dataDir = () => process.env.NOVA_DATA_DIR ?? path.join(os.homedir(), ".farid-editor");
 const configFile = () => path.join(dataDir(), "config.json");
 
 let cache: Config | null = null;

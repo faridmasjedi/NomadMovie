@@ -38,7 +38,7 @@ export function TopBar() {
 
   return (
     <div className="topbar">
-      <div className="logo"><span className="dot" />Nova</div>
+      <div className="logo"><span className="dot" />Farid Editor</div>
       <input className="name" value={p.name} onChange={(e) => s().commit((x) => void (x.name = e.target.value), "pname")} />
       <button className="ghost icon" title="Undo" disabled={!canUndo} onClick={() => s().undo()}><Icon d={I.undo} /></button>
       <button className="ghost icon" title="Redo" disabled={!canRedo} onClick={() => s().redo()}><Icon d={I.redo} /></button>
@@ -60,7 +60,7 @@ export function TopBar() {
         s().set({ media: {} });
         s().setProject(newProject());
       }}>New</button>
-      <button className="ghost icon" title="Open project file (.nova.json)" onClick={() => fileRef.current?.click()}><Icon d={I.folder} /></button>
+      <button className="ghost icon" title="Open project file (.farid.json)" onClick={() => fileRef.current?.click()}><Icon d={I.folder} /></button>
       <input ref={fileRef} type="file" accept=".json" hidden onChange={async (e) => {
         const f = e.target.files?.[0];
         if (!f) return;
@@ -75,7 +75,7 @@ export function TopBar() {
         }
         e.target.value = "";
       }} />
-      <button className="ghost icon" title="Save project file" onClick={() => download(new Blob([JSON.stringify(s().project, null, 1)], { type: "application/json" }), `${p.name}.nova.json`)}>
+      <button className="ghost icon" title="Save project file" onClick={() => download(new Blob([JSON.stringify(s().project, null, 1)], { type: "application/json" }), `${p.name}.farid.json`)}>
         <Icon d={I.save} />
       </button>
       <button className="primary" onClick={() => setExporting(true)}><Icon d={I.export} /> Export</button>

@@ -23,6 +23,7 @@ export function Preview() {
   const quality = useStore((s) => s.previewQuality);
   const selected = useStore((s) => s.selected);
   const loop = useStore((s) => s.loop);
+  const pick = useStore((s) => s.pick);
   const [, force] = useState(0);
   const meterRef = useRef<HTMLDivElement>(null);
   const tcRef = useRef<HTMLSpanElement>(null);
@@ -87,12 +88,18 @@ export function Preview() {
   const b = selId ? lastBounds.get(selId) : undefined;
 
   /** stage interactions: select + move / scale / rotate */
-  const onPointerDown = (e: React.PointerEvent, mode: "move" | "scale" | "rotate" = "move") => {
+  const onPointerDown = (e: React.PointerEvent, mode: "move" | "scale" | "rotate" | "sx" | "sy" = "move") => {
     if (e.button !== 0) return;
     e.stopPropagation();
     const rect = canvasRef.current!.getBoundingClientRect();
     const toProj = (ev: { clientX: number; clientY: number }) => ({ x: (ev.clientX - rect.left) / k, y: (ev.clientY - rect.top) / k });
     const st = useStore.getState();
+    if (st.pick) {
+      const pt = toProj(e);
+      st.pick.cb(Math.round(pt.x), Math.round(pt.y));
+      st.set({ pick: null });
+      return;
+    }
     let id = selId;
     if (mode === "move") {
       const pt = toProj(e);
@@ -127,6 +134,16 @@ export function Preview() {
           else c.transform.x = orig.x + (nx - kfBase.x);
           if (animated("y")) setKeyframe(c, "y", local, ny);
           else c.transform.y = orig.y + (ny - kfBase.y);
+        } else if (mode === "sx" || mode === "sy") {
+          // stretch along the clip's own (rotated) axis
+          const r = (-bounds.rotation * Math.PI) / 180;
+          const lx = (q: { x: number; y: number }) => {
+            const dx = q.x - bounds.x, dy = q.y - bounds.y;
+            return mode === "sx" ? Math.abs(dx * Math.cos(r) - dy * Math.sin(r)) : Math.abs(dx * Math.sin(r) + dy * Math.cos(r));
+          };
+          const f = lx(p) / Math.max(1, lx(start));
+          if (mode === "sx") c.transform.scaleX = Math.max(0.01, Math.round(orig.scaleX * f * 1000) / 1000);
+          else c.transform.scaleY = Math.max(0.01, Math.round(orig.scaleY * f * 1000) / 1000);
         } else if (mode === "scale") {
           const f = Math.hypot(p.x - bounds.x, p.y - bounds.y) / d0;
           if (animated("scale")) setKeyframe(c, "scale", local, Math.max(0.01, kfScale0 * f));
@@ -157,8 +174,13 @@ export function Preview() {
     <div className="preview-wrap">
       <div className="stage" ref={stageRef} onPointerDown={(e) => onPointerDown(e)}>
         <div style={{ position: "relative", width: fit.w, height: fit.h }}>
-          <canvas ref={canvasRef} className="view" style={{ width: fit.w, height: fit.h, display: "block" }} />
-          {b && !playing && (
+          <canvas ref={canvasRef} className="view" style={{ width: fit.w, height: fit.h, display: "block", cursor: pick ? "crosshair" : undefined }} />
+          {pick && (
+            <div className="pick-banner">
+              🎯 {pick.label} <button className="ghost" onClick={(e) => { e.stopPropagation(); useStore.getState().set({ pick: null }); }}>Cancel</button>
+            </div>
+          )}
+          {b && !playing && !pick && (
             <div
               className="sel-box"
               style={{
@@ -172,6 +194,10 @@ export function Preview() {
               <div className="h tl" onPointerDown={(e) => onPointerDown(e, "scale")} />
               <div className="h br" onPointerDown={(e) => onPointerDown(e, "scale")} />
               <div className="h rot" onPointerDown={(e) => onPointerDown(e, "rotate")} />
+              <div className="h side l" title="Stretch width" onPointerDown={(e) => onPointerDown(e, "sx")} />
+              <div className="h side r" title="Stretch width" onPointerDown={(e) => onPointerDown(e, "sx")} />
+              <div className="h side t" title="Stretch height" onPointerDown={(e) => onPointerDown(e, "sy")} />
+              <div className="h side b" title="Stretch height" onPointerDown={(e) => onPointerDown(e, "sy")} />
             </div>
           )}
         </div>

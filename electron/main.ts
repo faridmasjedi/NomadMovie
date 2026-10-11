@@ -22,7 +22,7 @@ async function createWindow(url: string) {
     height: 1000,
     minWidth: 1100,
     minHeight: 700,
-    title: "Nova Editor",
+    title: "Farid Editor",
     backgroundColor: "#0d0e12",
     show: false,
     webPreferences: {
@@ -55,7 +55,7 @@ app.whenReady().then(async () => {
   try {
     port = await startServer(PORT, { staticDir: path.join(app.getAppPath(), "dist") });
   } catch (e) {
-    dialog.showErrorBox("Nova Editor", `Could not start the local engine on port ${PORT}.\n\n${e instanceof Error ? e.message : e}`);
+    dialog.showErrorBox("Farid Editor", `Could not start the local engine on port ${PORT}.\n\n${e instanceof Error ? e.message : e}`);
     app.quit();
     return;
   }

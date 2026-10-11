@@ -16,7 +16,8 @@ export interface MediaItem {
   blob?: Blob;
 }
 
-export type ClipKind = "video" | "audio" | "image" | "text" | "shape" | "solid";
+/** "adjustment" = effect layer: applies its filters/effects to everything below it */
+export type ClipKind = "video" | "audio" | "image" | "text" | "shape" | "solid" | "adjustment";
 
 export type Easing = "linear" | "easeIn" | "easeOut" | "easeInOut" | "backOut" | "bounce" | "elastic" | "hold";
 
@@ -56,9 +57,7 @@ export interface Filters {
   tint: number; // -100..100
 }
 
-export type TransitionType =
-  | "none" | "fade" | "fadeBlack" | "fadeWhite" | "slideLeft" | "slideRight" | "slideUp" | "slideDown"
-  | "zoomIn" | "zoomOut" | "wipeLeft" | "wipeRight" | "wipeUp" | "circle" | "blurIn" | "spin";
+export type TransitionType = string; // id from TRANSITION_DEFS, or "none"
 
 export interface Transition {
   type: TransitionType;
@@ -69,11 +68,13 @@ export type AnimPreset =
   | "none" | "fade" | "slideUp" | "slideDown" | "slideLeft" | "slideRight" | "pop" | "zoom" | "bounce"
   | "spin" | "typewriter" | "blur" | "wordByWord" | "elastic";
 
-export type EffectType = "shake" | "glitch" | "pixelate" | "mirror" | "zoomPulse" | "flicker" | "rgbSplit" | "filmGrain" | "letterbox";
+export type EffectType = string; // canvas effect ("shake", "glitch"…) or GPU effect id from GL_EFFECTS
 
 export interface Effect {
   type: EffectType;
   amount: number; // 0..100
+  params?: { p1?: number; p2?: number; p3?: number; color1?: string; color2?: string };
+  enabled?: boolean;
 }
 
 export interface TextProps {

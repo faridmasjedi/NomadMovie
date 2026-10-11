@@ -1,5 +1,5 @@
 {
-  "name": "nova-editor",
+  "name": "farid-editor",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -33,6 +33,7 @@
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
     "esbuild": "^0.28.2",
+    "gl-transitions": "^1.74.0",
     "mp4-muxer": "^5.1.5",
     "mp4box": "^0.5.3",
     "react": "^18.3.1",
@@ -42,13 +43,13 @@
     "vite": "^5.4.11",
     "zustand": "^4.5.5"
   },
-  "productName": "Nova Editor",
+  "productName": "Farid Editor",
   "description": "AI-powered video editor and motion graphics app",
   "author": "Farid Masjedi",
   "main": "dist-electron/main.mjs",
   "build": {
-    "appId": "com.faridmasjedi.nova-editor",
-    "productName": "Nova Editor",
+    "appId": "com.faridmasjedi.farid-editor",
+    "productName": "Farid Editor",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -70,11 +71,11 @@
       "identity": null,
       "icon": "build/icon.png",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Nova Editor uses the microphone to record voice-overs."
+        "NSMicrophoneUsageDescription": "Farid Editor uses the microphone to record voice-overs."
       }
     },
     "dmg": {
-      "title": "Nova Editor"
+      "title": "Farid Editor"
     }
   }
 }

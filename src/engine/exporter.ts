@@ -4,6 +4,7 @@ import { audioEngine, encodeWav } from "./audio";
 import { renderFrame, prepareVideosAt } from "./render";
 import { allVideos, getImage, getSvgImage } from "./media";
 import { FrameSource } from "./decoder";
+import { isVisibleAt, visibleWindow } from "./timeline";
 
 export type ExportFormat = "mp4" | "webm" | "mov" | "gif" | "mp3" | "wav";
 
@@ -158,9 +159,8 @@ async function fastExport(p: Project, media: Record<string, MediaItem>, o: Expor
       const t = o.from + i / o.fps;
       frames.clear();
       for (const c of videoClips) {
-        const active = t >= c.start && t < c.start + c.duration;
-        if (!active) {
-          if (t >= c.start + c.duration && sources.get(c.id)) {
+        if (!isVisibleAt(p, c, t)) {
+          if (t >= visibleWindow(p, c)[1] && sources.get(c.id)) {
             sources.get(c.id)!.close();
             sources.set(c.id, null);
           }
@@ -171,7 +171,7 @@ async function fastExport(p: Project, media: Record<string, MediaItem>, o: Expor
           sources.set(c.id, await FrameSource.open(m.id, m.blob, m.name));
         }
         const src = sources.get(c.id);
-        if (src) frames.set(c.id, await src.frameAt(c.offset + (t - c.start) * c.speed));
+        if (src) frames.set(c.id, await src.frameAt(Math.max(0, c.offset + (t - c.start) * c.speed)));
       }
       await prepareVideosAt(p, media, t, frames);
       renderFrame(ctx, p, media, t, { playing: false, exporting: true, scale: o.scale, frames });

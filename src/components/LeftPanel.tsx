@@ -4,11 +4,10 @@ import type { Clip, MediaItem } from "../types";
 import { importFile } from "../engine/media";
 import { saveMedia, deleteMedia } from "../engine/persist";
 import { clipFromMedia, defaultShape, defaultText, makeClip } from "../factory";
-import { EFFECTS, LOOKS, SHAPES, SOLID_COLORS, TEXT_STYLES } from "../engine/presets";
-import { TRANSITIONS } from "../engine/animate";
-import { lookCss } from "./Inspector";
+import { SHAPES, SOLID_COLORS, TEXT_STYLES } from "../engine/presets";
+import { FxBrowser } from "./FxBrowser";
+import { photoSlideshow } from "../ai/smart";
 import { AIPanel } from "./AIPanel";
-import { defaultFilters } from "../factory";
 
 const TABS: [LeftTab, string, string][] = [
   ["media", "🎞", "Media"],
@@ -36,8 +35,8 @@ export function LeftPanel() {
         {tab === "media" && <MediaTab />}
         {tab === "text" && <TextTab />}
         {tab === "elements" && <ElementsTab />}
-        {tab === "effects" && <EffectsTab />}
-        {tab === "transitions" && <TransitionsTab />}
+        {tab === "effects" && <FxBrowser mode="effects" />}
+        {tab === "transitions" && <FxBrowser mode="transitions" />}
         {tab === "audio" && <AudioPanel />}
         {tab === "ai" && <AIPanel />}
       </div>
@@ -77,6 +76,7 @@ function MediaTab() {
   const media = useStore((s) => s.media);
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<"all" | MediaItem["kind"]>("all");
   const items = Object.values(media).filter((m) => filter === "all" || m.kind === filter);
   const add = (m: MediaItem) => {
@@ -108,8 +108,26 @@ function MediaTab() {
       >
         <div style={{ fontSize: 26 }}>⬆</div>
         Drop video, audio or image files here
-        <div className="hint">or click to browse · MP4, MOV, WebM, MP3, WAV, PNG, JPG, SVG…</div>
-        <input ref={input} type="file" multiple accept="video/*,audio/*,image/*" hidden onChange={(e) => e.target.files && importFiles(e.target.files)} />
+        <div className="hint">or click to browse · MP4, MOV, WebM, MP3, WAV, JPG, PNG, HEIC, TIFF, SVG…</div>
+        <input ref={input} type="file" multiple accept="video/*,audio/*,image/*,.heic,.heif,.tif,.tiff" hidden onChange={(e) => e.target.files && importFiles(e.target.files)} />
+      </div>
+      <div className="row" style={{ marginBottom: 10, gap: 6 }}>
+        <button onClick={() => photoInput.current?.click()}>🖼 Import photos</button>
+        <button
+          disabled={!Object.values(media).some((m) => m.kind === "image")}
+          title="Put all photos on the timeline with cross dissolves and a gentle Ken Burns move"
+          onClick={() => {
+            try {
+              const n = photoSlideshow(Object.values(useStore.getState().media).filter((m) => m.kind === "image").map((m) => m.id));
+              useStore.getState().notify(`Slideshow with ${n} photos added`, "ok");
+            } catch (e) {
+              useStore.getState().notify(e instanceof Error ? e.message : String(e), "error");
+            }
+          }}
+        >
+          🎞 Photo slideshow
+        </button>
+        <input ref={photoInput} type="file" multiple accept="image/*,.heic,.heif,.tif,.tiff" hidden onChange={(e) => e.target.files && importFiles(e.target.files)} />
       </div>
       <div className="chips" style={{ marginBottom: 10 }}>
         {(["all", "video", "audio", "image"] as const).map((k) => (
@@ -256,79 +274,6 @@ function shapeIcon(t: string) {
     case "arrow": return "M-15 -4H3V-12L16 0L3 12V4H-15z";
     default: return "M-16 -2H16V2H-16z";
   }
-}
-
-function EffectsTab() {
-  const selected = useStore((s) => s.selected);
-  const targets = () => {
-    const s = useStore.getState();
-    const ids = s.selected.filter((id) => s.project.clips.find((c) => c.id === id)?.kind !== "audio");
-    if (!ids.length) s.notify("Select a visual clip first", "error");
-    return ids;
-  };
-  return (
-    <>
-      <div className="panel-title">Color filters</div>
-      {!selected.length && <div className="hint" style={{ marginBottom: 8 }}>Select a clip on the timeline, then click a filter or effect.</div>}
-      <div className="grid3">
-        {LOOKS.map((l) => (
-          <div key={l.id} className="tile" style={{ padding: 6 }}
-            onClick={() => targets().forEach((id) => useStore.getState().updateClip(id, (x) => void (x.filters = { ...defaultFilters(), ...l.f })))}>
-            <div className="swatch" style={{ background: "linear-gradient(135deg,#f4a261,#2a9d8f 60%,#264653)", filter: lookCss(l.f) }} />
-            <span>{l.label}</span>
-          </div>
-        ))}
-      </div>
-      <div className="panel-title" style={{ marginTop: 16 }}>Video effects</div>
-      <div className="grid3">
-        {EFFECTS.map((e) => (
-          <div key={e.type} className="tile"
-            onClick={() => targets().forEach((id) => useStore.getState().updateClip(id, (x) => {
-              x.effects = x.effects.filter((y) => y.type !== e.type);
-              x.effects.push({ type: e.type, amount: e.amount });
-            }))}>
-            {e.label}
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function TransitionsTab() {
-  const [dur, setDur] = useState(0.6);
-  const apply = (type: (typeof TRANSITIONS)[number][0], side: "in" | "out" | "both") => {
-    const s = useStore.getState();
-    if (!s.selected.length) return s.notify("Select a clip first", "error");
-    for (const id of s.selected)
-      s.updateClip(id, (x) => {
-        if (side !== "out") x.transitionIn = { type, duration: dur };
-        if (side !== "in") x.transitionOut = { type, duration: dur };
-      });
-  };
-  return (
-    <>
-      <div className="panel-title">Transitions</div>
-      <div className="hint" style={{ marginBottom: 8 }}>
-        Select a clip. Click = in & out · Shift+click = in only · Alt+click = out only.
-        For a cross-dissolve, overlap two clips slightly on two tracks.
-      </div>
-      <div className="row slider-row" style={{ marginBottom: 10 }}>
-        <label>Duration</label>
-        <input type="range" min={0.1} max={3} step={0.05} value={dur} onChange={(e) => setDur(Number(e.target.value))} />
-        <span className="hint">{dur.toFixed(2)}s</span>
-      </div>
-      <div className="grid3">
-        {TRANSITIONS.filter((t) => t[0] !== "none").map(([type, label]) => (
-          <div key={type} className="tile" onClick={(e) => apply(type, e.shiftKey ? "in" : e.altKey ? "out" : "both")}>
-            <div className="swatch" style={{ background: "linear-gradient(90deg, #3a6df0 50%, #c4569f 50%)", fontSize: 18 }}>⇄</div>
-            {label}
-          </div>
-        ))}
-        <div className="tile" onClick={() => apply("none", "both")}>Remove transition</div>
-      </div>
-    </>
-  );
 }
 
 function AudioPanel() {

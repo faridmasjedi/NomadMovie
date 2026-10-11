@@ -1,7 +1,10 @@
 import { useStore } from "../store";
 import { makeClip, defaultText, defaultShape, clipFromMedia, projectDuration } from "../factory";
 import { LOOKS, FONTS, EFFECTS } from "../engine/presets";
-import { ANIM_PRESETS, TRANSITIONS } from "../engine/animate";
+import { ANIM_PRESETS } from "../engine/animate";
+import { applyMotion, type MotionPreset } from "../engine/motion";
+import { TRANSITION_DEFS } from "../engine/transitionsLib";
+import { GL_EFFECTS } from "../engine/effectsLib";
 import type { AnimProp, Clip, EffectType, Keyframe, ShapeType } from "../types";
 import { autoDuck, beatsToMarkers, normalizeClip, removeSilence, scenesForClip } from "./smart";
 
@@ -48,8 +51,11 @@ export function buildContext() {
     markers: p.markers.map((m) => ({ time: r(m.time), label: m.label })),
     catalog: {
       looks: LOOKS.map((l) => l.id),
-      effects: EFFECTS.map((e) => e.type),
-      transitions: TRANSITIONS.map((t) => t[0]),
+      effects: [
+        ...GL_EFFECTS.map((e) => `${e.id}${e.params || e.colors ? `(${[...(e.params ?? []).map((q) => `${q.key}=${q.label} ${q.min}..${q.max}`), ...(e.colors ?? []).map((q) => `${q.key}=${q.label} hex`)].join(", ")})` : ""}`),
+        "shake", "zoomPulse", "flicker", "letterbox",
+      ],
+      transitions: TRANSITION_DEFS.map((t) => `${t.id} (${t.category})`),
       animPresets: ANIM_PRESETS.map((a) => a[0]),
       fonts: FONTS,
     },
@@ -63,6 +69,9 @@ function deepMerge(target: any, patch: any) {
     else if (v !== undefined) target[k] = v;
   }
 }
+
+/** catalog entries are shown as "id (details)" — keep only the id */
+const bare = (v: any) => String(v ?? "").split(/[\s(]/)[0];
 
 const num = (v: any, d: number) => (typeof v === "number" && isFinite(v) ? v : d);
 
@@ -213,17 +222,38 @@ export async function runActions(actions: AIAction[]): Promise<string[]> {
         case "set_transition": {
           const c = clip(a.clipId);
           S().updateClip(c.id, (x) => {
-            if (a.in) x.transitionIn = { type: a.in.type ?? "fade", duration: num(a.in.duration, 0.5) };
-            if (a.out) x.transitionOut = { type: a.out.type ?? "fade", duration: num(a.out.duration, 0.5) };
+            if (a.in) x.transitionIn = { type: bare(a.in.type) || "fade", duration: num(a.in.duration, 0.5) };
+            if (a.out) x.transitionOut = { type: bare(a.out.type) || "fade", duration: num(a.out.duration, 0.5) };
           });
           break;
         }
         case "add_effect": {
           const c = clip(a.clipId);
           S().updateClip(c.id, (x) => {
-            x.effects = x.effects.filter((e) => e.type !== a.type);
-            x.effects.push({ type: a.type as EffectType, amount: num(a.amount, 50) });
+            const type = bare(a.type);
+            x.effects = x.effects.filter((e) => e.type !== type);
+            x.effects.push({ type: type as EffectType, amount: num(a.amount, 50), ...(a.params ? { params: a.params } : {}) });
           });
+          break;
+        }
+        case "add_effect_layer": {
+          const c = makeClip(p, "adjustment", "", num(a.start, S().currentTime), num(a.duration, 5), { name: "Effect layer" });
+          c.effects = (a.effects ?? []).map((e: any) => ({ type: bare(e.type), amount: num(e.amount, 50), ...(e.params ? { params: e.params } : {}) }));
+          const look = LOOKS.find((l) => l.id === a.look);
+          if (look) c.filters = { ...c.filters, ...look.f };
+          c.trackId = S().addTrack("video"); // top-most, so it affects everything below
+          S().addClip(c);
+          if (a.ref) refs[a.ref] = c.id;
+          break;
+        }
+        case "apply_motion": {
+          const c = clip(a.clipId);
+          S().updateClip(c.id, (x, pp) =>
+            applyMotion(x, pp, {
+              preset: (a.preset ?? "zoomIn") as MotionPreset, start: num(a.start, 0), duration: num(a.duration, x.duration), amount: num(a.amount, 1.3),
+              focusX: num(a.focusX, pp.width / 2), focusY: num(a.focusY, pp.height / 2), ease: "easeInOut",
+            }),
+          );
           break;
         }
         case "clear_effects":

@@ -26,6 +26,10 @@ interface State {
   busy: string | null;
   loop: boolean;
   previewQuality: number; // 0.25..1
+  /** asks the Inspector to show a specific part of a clip (e.g. an effect clicked on the timeline) */
+  focus: { clipId: string; tab: string; key?: string; at: number } | null;
+  /** when set, the next click on the preview reports a point in project coordinates */
+  pick: { label: string; cb: (x: number, y: number) => void } | null;
 
   commit: (fn: (p: Project) => void, mergeKey?: string) => void;
   setProject: (p: Project) => void;
@@ -57,6 +61,7 @@ interface State {
   notify: (msg: string, kind?: "info" | "error" | "ok") => void;
   setBusy: (b: string | null) => void;
   set: (patch: Partial<State>) => void;
+  focusClip: (clipId: string, tab: string, key?: string) => void;
 }
 
 const MAX_HISTORY = 120;
@@ -82,6 +87,8 @@ export const useStore = create<State>((set, get) => ({
   busy: null,
   loop: false,
   previewQuality: 1,
+  focus: null,
+  pick: null,
 
   commit: (fn, mergeKey) => {
     const { project, past } = get();
@@ -286,6 +293,7 @@ export const useStore = create<State>((set, get) => ({
   notify: (msg, kind = "info") => set({ toast: { msg, kind, id: Date.now() } }),
   setBusy: (busy) => set({ busy }),
   set: (patch) => set(patch),
+  focusClip: (clipId, tab, key) => set({ selected: [clipId], focus: { clipId, tab, key, at: Date.now() } }),
 }));
 
 export const getClip = (id: string) => useStore.getState().project.clips.find((c) => c.id === id);

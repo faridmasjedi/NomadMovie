@@ -62,7 +62,7 @@ export function getSvgImage(svg: string): HTMLImageElement {
 const kindOf = (type: string, name: string): MediaItem["kind"] | null => {
   if (type.startsWith("video/") || /\.(mp4|mov|webm|mkv|m4v)$/i.test(name)) return "video";
   if (type.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name)) return "audio";
-  if (type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name)) return "image";
+  if (type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp|heic|heif|tiff?|avif)$/i.test(name)) return "image";
   return null;
 };
 
@@ -87,13 +87,34 @@ export async function importFile(file: Blob & { name?: string }, id = uid("med")
     item.height = v.videoHeight;
     item.thumb = await captureThumb(v, Math.min(1, v.duration / 3));
   } else if (kind === "image") {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
+    const decode = async (u: string) => {
+      const img = new Image();
+      img.src = u;
+      await img.decode();
+      return img;
+    };
+    let img: HTMLImageElement | null = null;
+    const needsConvert = /\.(heic|heif|tiff?)$/i.test(name) || /heic|heif|tiff/i.test(file.type);
+    if (!needsConvert) img = await decode(url).catch(() => null);
+    if (!img) {
+      // e.g. iPhone HEIC photos: convert to JPEG on the local engine
+      const res = await fetch(`/api/image?ext=${encodeURIComponent(name.split(".").pop() ?? "")}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: file,
+      });
+      if (!res.ok) throw new Error("This image format is not supported");
+      const jpg = await res.blob();
+      URL.revokeObjectURL(url);
+      item.blob = jpg;
+      item.url = URL.createObjectURL(jpg);
+      item.name = name.replace(/\.\w+$/, ".jpg");
+      img = await decode(item.url);
+    }
     item.width = img.naturalWidth || 1000;
     item.height = img.naturalHeight || 1000;
     item.duration = 5;
-    item.thumb = url;
+    item.thumb = item.url;
   }
 
   if (kind !== "image") {

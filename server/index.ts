@@ -169,6 +169,27 @@ export function createApp(opts: { staticDir?: string } = {}) {
     }
   });
 
+  /** converts photos browsers can't show (HEIC from iPhone, TIFF…) to JPEG */
+  app.post("/api/image", express.raw({ type: () => true, limit: "300mb" }), async (req, res) => {
+    const body = req.body as Buffer;
+    if (!Buffer.isBuffer(body) || !body.length) return void res.status(400).json({ error: "empty upload" });
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-img-"));
+    const ext = String(req.query.ext ?? "heic").replace(/[^a-z0-9]/gi, "").slice(0, 5) || "bin";
+    const input = path.join(dir, `in.${ext}`);
+    const output = path.join(dir, "out.jpg");
+    fs.writeFileSync(input, body);
+    try {
+      if (process.platform === "darwin") await run("/usr/bin/sips", ["-s", "format", "jpeg", "-s", "formatOptions", "92", input, "--out", output]);
+      else if (FFMPEG) await run(FFMPEG, ["-y", "-i", input, "-q:v", "2", output]);
+      else throw new Error("no image converter available");
+      res.setHeader("Content-Type", "image/jpeg");
+      res.sendFile(output, () => fs.rmSync(dir, { recursive: true, force: true }));
+    } catch (e) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      res.status(500).json({ error: errMsg(e) });
+    }
+  });
+
   /** local speech-to-text with the openai-whisper CLI, if installed */
   app.post("/api/transcribe", express.raw({ type: () => true, limit: "1gb" }), async (req, res) => {
     if (!WHISPER) return void res.status(501).json({ error: "whisper CLI is not installed (pip install openai-whisper)" });
@@ -220,7 +241,7 @@ if (isMain) {
   const prod = process.env.NODE_ENV === "production";
   const port = await startServer(Number(process.env.PORT ?? 5173), { dev: !prod, staticDir: path.resolve("dist") });
   const cfg = getConfig();
-  console.log(`\n  Nova Editor  →  http://localhost:${port}`);
+  console.log(`\n  Farid Editor  →  http://localhost:${port}`);
   console.log(`  ffmpeg: ${FFMPEG ?? "no"}   whisper: ${WHISPER ? "yes" : "no"}`);
   console.log(`  AI: ${cfg.provider === "claude-code" ? `Claude subscription via Claude Code (${findClaude() ?? "not found"})` : "Anthropic API key"}\n`);
 }

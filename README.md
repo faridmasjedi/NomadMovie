@@ -1,8 +1,8 @@
-# Nova Editor
+# Farid Editor
 
 An AI-powered desktop video editor: a multi-track timeline like Filmora, keyframed motion graphics like After Effects, a full set of audio tools, and a Claude assistant that edits your project when you describe what you want.
 
-![Nova Editor icon](build/icon.png)
+![Farid Editor icon](build/icon.png)
 
 ## Run it
 
@@ -10,10 +10,10 @@ An AI-powered desktop video editor: a multi-track timeline like Filmora, keyfram
 
 ```bash
 npm install
-npm run dist          # builds release/mac/Nova Editor.app and a .dmg
+npm run dist          # builds release/mac/Farid Editor.app and a .dmg
 ```
 
-Open `release/mac/Nova Editor.app`, or drag it into Applications.
+Open `release/mac/Farid Editor.app`, or drag it into Applications.
 
 **During development**
 
@@ -24,12 +24,12 @@ npm run app           # build and launch the desktop app
 
 ## AI: use your own Claude subscription
 
-By default Nova runs AI requests through **Claude Code** (`claude -p`) on your computer, so it uses your Claude Pro or Max login and needs no API key.
+By default Farid Editor runs AI requests through **Claude Code** (`claude -p`) on your computer, so it uses your Claude Pro or Max login and needs no API key.
 
 1. Install Claude Code: `npm i -g @anthropic-ai/claude-code`
 2. Run `claude` once and sign in with your Claude account.
 
-To use an Anthropic API key instead, open **⚙ Settings → Anthropic API key**. Settings are saved in the app's data folder (or `~/.nova-editor/config.json` when running from source).
+To use an Anthropic API key instead, open **⚙ Settings → Anthropic API key**. Settings are saved in the app's data folder (or `~/.farid-editor/config.json` when running from source).
 
 ## Features
 
@@ -58,7 +58,7 @@ Export doesn't play the video back and record it. Instead:
 4. Audio is mixed offline.
 5. ffmpeg muxes video and audio by stream copy.
 
-An 8-second 1080p timeline exports in about 4 seconds on a 2019 Intel Mac. Clips made only of text and graphics export much faster than that. If WebCodecs isn't available, Nova falls back to real-time capture.
+An 8-second 1080p timeline exports in about 4 seconds on a 2019 Intel Mac. Clips made only of text and graphics export much faster than that. If WebCodecs isn't available, Farid Editor falls back to real-time capture.
 
 ## Project layout
 

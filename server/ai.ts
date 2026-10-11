@@ -17,7 +17,7 @@ const apiKeyAvailable = () =>
 
 export const aiAvailable = () => (getConfig().provider === "claude-code" ? !!findClaude() : apiKeyAvailable());
 
-const SYSTEM_PROMPT = `You are the built-in AI editor of "Nova Editor", a multi-track video editor and motion-graphics tool (similar to Filmora / After Effects).
+const SYSTEM_PROMPT = `You are the built-in AI editor of "Farid Editor", a multi-track video editor and motion-graphics tool (similar to Filmora / After Effects).
 The user talks to you in any language and you edit their project by returning a list of actions that the app executes in order.
 
 ## Coordinate system and timing
@@ -49,8 +49,10 @@ update_clip {clipId, patch} — deep-merges patch into the clip. Patchable: name
    crop {top,right,bottom,left (percent)}, chroma {enabled,color,threshold,smoothness}
 set_keyframes {clipId, prop: x|y|scale|scaleX|scaleY|rotation|opacity|blur|volume, keyframes: [{t, v, ease: linear|easeIn|easeOut|easeInOut|backOut|bounce|elastic|hold}]} — replaces that property's keyframes. scale/scaleX/scaleY/volume are multipliers (1 = normal), opacity 0..1, rotation in degrees, blur px. Keyframed x/y override transform.x/y.
 set_animation {clipId, animIn?, animOut?, animInDur?, animOutDur?} — preset entrance/exit animations (see catalog). Good for quick text animation; use set_keyframes for custom motion.
-set_transition {clipId, in?: {type, duration}, out?: {type, duration}}
-add_effect {clipId, type, amount(0-100)}  /  clear_effects {clipId}
+set_transition {clipId, in?: {type, duration}, out?: {type, duration}} — "in" is the transition on the cut at the clip's START: it blends from the previous clip on the same track (if adjacent) into this clip, centered on the cut. "out" only applies when no clip follows. Use catalog transition ids.
+add_effect {clipId, type, amount(0-100), params?: {p1?, p2?, p3?, color1?, color2?}}  /  clear_effects {clipId} — effect ids from the catalog (GPU effects have parameters p1..p3 and colors; omit params to use defaults)
+add_effect_layer {effects: [{type, amount, params?}], start, duration, look?} — an adjustment layer that applies effects/look to everything below it (good for global color grades or overlays like light leaks, film grain, rain)
+apply_motion {clipId, preset: zoomIn|zoomOut|punchIn|kenBurns|panLeft|panRight|panUp|panDown, start (clip-local s), duration, amount (zoom factor e.g. 1.3), focusX?, focusY? (project px)} — camera-style zoom/pan inside a clip
 apply_look {clipId, look} — color-grade preset from the catalog
 split {time, clipId?} — split at a timeline time (all clips under the playhead if clipId omitted)
 trim {clipId, start?, end?} — new timeline in/out points

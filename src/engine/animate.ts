@@ -1,4 +1,4 @@
-import type { AnimPreset, AnimProp, Clip, Easing, Keyframe, TransitionType } from "../types";
+import type { AnimPreset, AnimProp, Clip, Easing, Keyframe } from "../types";
 
 export const EASE: Record<Easing, (t: number) => number> = {
   linear: (t) => t,
@@ -58,12 +58,7 @@ const ANIM_ENTRIES: [AnimPreset, string][] = [
 ];
 export const ANIM_PRESETS = ANIM_ENTRIES;
 
-export const TRANSITIONS: [TransitionType, string][] = [
-  ["none", "None"], ["fade", "Fade"], ["fadeBlack", "Dip to black"], ["fadeWhite", "Flash white"], ["slideLeft", "Slide left"],
-  ["slideRight", "Slide right"], ["slideUp", "Slide up"], ["slideDown", "Slide down"], ["zoomIn", "Zoom in"],
-  ["zoomOut", "Zoom out"], ["wipeLeft", "Wipe left"], ["wipeRight", "Wipe right"], ["wipeUp", "Wipe up"],
-  ["circle", "Circle"], ["blurIn", "Blur"], ["spin", "Rotation"],
-];
+
 
 /** applies an entrance (dir=1, p:0→1) or exit (dir=-1, p:1→0) animation preset */
 function applyPreset(s: FrameState, preset: AnimPreset, p: number, W: number, H: number) {
@@ -82,28 +77,6 @@ function applyPreset(s: FrameState, preset: AnimPreset, p: number, W: number, H:
     case "wordByWord": s.reveal = Math.min(s.reveal, p); s.revealMode = "words"; break;
     case "blur": s.blur += q * 30; s.opacity *= p; break;
     case "elastic": { const e = EASE.elastic(p); s.sx *= e; s.sy *= e; break; }
-  }
-}
-
-function applyTransition(s: FrameState, type: TransitionType, p: number, W: number, H: number) {
-  // p: 0 = fully hidden, 1 = fully visible
-  const e = EASE.easeInOut(p), q = 1 - e;
-  switch (type) {
-    case "fade": s.opacity *= p; break;
-    case "fadeBlack": s.brightness *= p; break;
-    case "fadeWhite": s.brightness *= 1 + q * 4; s.opacity *= Math.min(1, p * 1.5); break;
-    case "slideLeft": s.x += q * W; break;
-    case "slideRight": s.x -= q * W; break;
-    case "slideUp": s.y += q * H; break;
-    case "slideDown": s.y -= q * H; break;
-    case "zoomIn": s.sx *= 0.2 + 0.8 * e; s.sy *= 0.2 + 0.8 * e; s.opacity *= p; break;
-    case "zoomOut": s.sx *= 1 + q * 1.5; s.sy *= 1 + q * 1.5; s.opacity *= p; break;
-    case "wipeLeft": s.wipe = { dir: "left", p: e }; break;
-    case "wipeRight": s.wipe = { dir: "right", p: e }; break;
-    case "wipeUp": s.wipe = { dir: "up", p: e }; break;
-    case "circle": s.wipe = { circle: e }; break;
-    case "blurIn": s.blur += q * 40; s.opacity *= p; break;
-    case "spin": s.rotation += q * 360; s.sx *= e; s.sy *= e; break;
   }
 }
 
@@ -126,10 +99,6 @@ export function frameState(c: Clip, local: number, W: number, H: number): FrameS
   if (c.animIn !== "none" && local < c.animInDur) applyPreset(s, c.animIn, Math.max(0, local / c.animInDur), W, H);
   const fromEnd = c.duration - local;
   if (c.animOut !== "none" && fromEnd < c.animOutDur) applyPreset(s, c.animOut, Math.max(0, fromEnd / c.animOutDur), W, H);
-  if (c.transitionIn.type !== "none" && local < c.transitionIn.duration)
-    applyTransition(s, c.transitionIn.type, local / c.transitionIn.duration, W, H);
-  if (c.transitionOut.type !== "none" && fromEnd < c.transitionOut.duration)
-    applyTransition(s, c.transitionOut.type, fromEnd / c.transitionOut.duration, W, H);
   return s;
 }
 

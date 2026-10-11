@@ -11,6 +11,7 @@ import { seek, toggle, pause } from "./engine/playback";
 import { uid } from "./factory";
 import { FONTS } from "./engine/presets";
 import { markDirty } from "./components/Preview";
+import { ContextMenuHost } from "./components/ContextMenu";
 
 export default function App() {
   const toast = useStore((s) => s.toast);
@@ -138,6 +139,7 @@ export default function App() {
       </div>
       <div className="resizer" onPointerDown={startResize} />
       <Timeline />
+      <ContextMenuHost />
       {toast && <div key={toast.id} className={`toast ${toast.kind}`}>{toast.msg}</div>}
       {busy && <div className="busy"><span className="spin" />{busy}</div>}
     </div>

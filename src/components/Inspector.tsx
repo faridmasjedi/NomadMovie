@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
-import type { AnimPreset, AnimProp, Clip, Easing, TransitionType } from "../types";
-import { ANIM_PRESETS, TRANSITIONS, PROP_LABEL, currentPropValue, setKeyframe } from "../engine/animate";
+import type { AnimPreset, AnimProp, Clip, Easing, Effect } from "../types";
+import { ANIM_PRESETS, PROP_LABEL, currentPropValue, setKeyframe } from "../engine/animate";
+import { TRANSITION_DEFS, TRANSITION_CATEGORIES } from "../engine/transitionsLib";
+import { GL_EFFECTS, EFFECT_CATEGORIES, effectDef } from "../engine/effectsLib";
+import { MOTION_PRESETS, applyMotion, clearMotion, type MotionPreset } from "../engine/motion";
+import { contentSize } from "../engine/render";
+import { prevAdjacent, nextAdjacent } from "../engine/timeline";
+import { effectLabel, newEffect, detachAudio } from "./timelineParts";
 import { EFFECTS, FONTS, LOOKS, SHAPES } from "../engine/presets";
 import { Color, Field, Section, Select, Slider, Toggle, Icon, I } from "./ui";
 import { autoDuck, normalizeClip, removeSilence, beatsToMarkers, scenesForClip } from "../ai/smart";
-import { makeClip, defaultFilters, fmtTime } from "../factory";
+import { defaultFilters, fmtTime } from "../factory";
 
 type Tab = "basic" | "anim" | "color" | "fx" | "audio" | "speed";
 
@@ -13,6 +19,11 @@ export function Inspector() {
   const selected = useStore((s) => s.selected);
   const clip = useStore((s) => (s.selected.length === 1 ? s.project.clips.find((c) => c.id === s.selected[0]) : undefined));
   const [tab, setTab] = useState<Tab>("basic");
+  const focus = useStore((s) => s.focus);
+  // jump to whatever was clicked on the timeline (an effect chip, a transition…)
+  useEffect(() => {
+    if (focus && clip && focus.clipId === clip.id && Date.now() - focus.at < 1500) setTab(focus.tab as Tab);
+  }, [focus, clip?.id]);
 
   if (!clip) return <ProjectSettings multi={selected.length} />;
 
@@ -21,7 +32,7 @@ export function Inspector() {
   const tabs: [Tab, string, boolean][] = [
     ["basic", "Basic", true],
     ["anim", "Animation", visual],
-    ["color", "Color", visual && clip.kind !== "text"],
+    ["color", "Color", visual && clip.kind !== "text" && clip.kind !== "shape"],
     ["fx", "Effects", visual],
     ["audio", "Audio", sound],
     ["speed", "Speed", clip.kind === "video" || clip.kind === "audio"],
@@ -115,6 +126,7 @@ function BasicTab({ c }: { c: Clip }) {
           <AnimSlider c={c} prop="y" label="Y" min={-p.height} max={p.height * 2} base={c.transform.y} setBase={(x, v) => (x.transform.y = v)} />
           <AnimSlider c={c} prop="scale" label="Scale" min={0.01} max={5} step={0.01} base={c.transform.scale} setBase={(x, v) => (x.transform.scale = v)} />
           <AnimSlider c={c} prop="rotation" label="Rotation" min={-360} max={360} base={c.transform.rotation} setBase={(x, v) => (x.transform.rotation = v)} unit="°" />
+          {c.kind !== "adjustment" && <SizeFields c={c} />}
           <AnimSlider c={c} prop="opacity" label="Opacity" min={0} max={1} step={0.01} base={c.transform.opacity} setBase={(x, v) => (x.transform.opacity = v)} />
           <div className="row" style={{ gap: 6 }}>
             <button onClick={() => upd(c, "flipH", (x) => void (x.transform.flipH = !x.transform.flipH))}>↔ Flip H</button>
@@ -153,6 +165,50 @@ function BasicTab({ c }: { c: Clip }) {
           <Slider label="Softness" min={0} max={100} value={c.chroma.smoothness} onChange={(v) => upd(c, "chromas", (x) => void (x.chroma.smoothness = v))} />
         </Section>
       )}
+    </>
+  );
+}
+
+/** exact on-screen size in pixels; unlock the ratio to stretch freely */
+function SizeFields({ c }: { c: Clip }) {
+  const p = useStore((s) => s.project);
+  const media = useStore((s) => s.media);
+  const [lock, setLock] = useState(true);
+  const [bw, bh] = contentSize(c, c.mediaId ? media[c.mediaId] : undefined, p.width, p.height);
+  const w = Math.round(bw * c.transform.scale * c.transform.scaleX);
+  const h = Math.round(bh * c.transform.scale * c.transform.scaleY);
+  const setW = (v: number) =>
+    upd(c, "sizew", (x) => {
+      const k = Math.max(1, v) / (bw * x.transform.scale);
+      if (lock) {
+        x.transform.scale *= k / x.transform.scaleX;
+        x.transform.scaleY = x.transform.scaleY / x.transform.scaleX;
+        x.transform.scaleX = 1;
+      } else x.transform.scaleX = k;
+    });
+  const setH = (v: number) =>
+    upd(c, "sizeh", (x) => {
+      const k = Math.max(1, v) / (bh * x.transform.scale);
+      if (lock) {
+        x.transform.scale *= k / x.transform.scaleY;
+        x.transform.scaleX = x.transform.scaleX / x.transform.scaleY;
+        x.transform.scaleY = 1;
+      } else x.transform.scaleY = k;
+    });
+  return (
+    <>
+      <Field label="Size (px)">
+        <input type="number" value={w} min={1} onChange={(e) => e.target.value && setW(Number(e.target.value))} style={{ width: 70 }} />
+        <button className={`ghost icon ${lock ? "active" : ""}`} title={lock ? "Aspect ratio locked" : "Free resize"} onClick={() => setLock(!lock)}>{lock ? "🔒" : "🔓"}</button>
+        <input type="number" value={h} min={1} onChange={(e) => e.target.value && setH(Number(e.target.value))} style={{ width: 70 }} />
+      </Field>
+      <div className="chips">
+        <span className="chip" onClick={() => upd(c, "fitw", (x) => { x.transform.scale = p.width / bw; x.transform.scaleX = 1; x.transform.scaleY = 1; })}>Fit width</span>
+        <span className="chip" onClick={() => upd(c, "fith", (x) => { x.transform.scale = p.height / bh; x.transform.scaleX = 1; x.transform.scaleY = 1; })}>Fit height</span>
+        <span className="chip" onClick={() => upd(c, "fill", (x) => { x.transform.scale = 1; x.transform.scaleX = p.width / bw; x.transform.scaleY = p.height / bh; })}>Fill frame</span>
+        <span className="chip" onClick={() => upd(c, "half", (x) => { x.transform.scale = 0.5; x.transform.scaleX = 1; x.transform.scaleY = 1; })}>50%</span>
+        <span className="chip" onClick={() => upd(c, "one", (x) => { x.transform.scale = 1; x.transform.scaleX = 1; x.transform.scaleY = 1; })}>100%</span>
+      </div>
     </>
   );
 }
@@ -220,35 +276,21 @@ function AnimTab({ c }: { c: Clip }) {
   const props = (Object.keys(c.keyframes) as AnimProp[]).filter((k) => c.keyframes[k]?.length);
   return (
     <>
-      <Section title="In animation">
+      <Section title="In animation" fid="animIn">
         <Field label="Type">
           <Select value={c.animIn} options={ANIM_PRESETS as [AnimPreset, string][]} onChange={(v) => upd(c, "ai", (x) => void (x.animIn = v))} />
         </Field>
         <Slider label="Duration" min={0.1} max={Math.max(0.2, c.duration)} step={0.05} value={c.animInDur} onChange={(v) => upd(c, "aid", (x) => void (x.animInDur = v))} />
       </Section>
-      <Section title="Out animation">
+      <Section title="Out animation" fid="animOut">
         <Field label="Type">
           <Select value={c.animOut} options={ANIM_PRESETS as [AnimPreset, string][]} onChange={(v) => upd(c, "ao", (x) => void (x.animOut = v))} />
         </Field>
         <Slider label="Duration" min={0.1} max={Math.max(0.2, c.duration)} step={0.05} value={c.animOutDur} onChange={(v) => upd(c, "aod", (x) => void (x.animOutDur = v))} />
       </Section>
-      <Section title="Transition">
-        {(["in", "out"] as const).map((side) => {
-          const tr = side === "in" ? c.transitionIn : c.transitionOut;
-          return (
-            <div key={side} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <Field label={side === "in" ? "In" : "Out"}>
-                <Select value={tr.type} options={TRANSITIONS as [TransitionType, string][]}
-                  onChange={(v) => upd(c, `tr${side}`, (x) => void (side === "in" ? (x.transitionIn.type = v) : (x.transitionOut.type = v)))} />
-              </Field>
-              {tr.type !== "none" && (
-                <Slider label="Duration" min={0.1} max={3} step={0.05} value={tr.duration}
-                  onChange={(v) => upd(c, `trd${side}`, (x) => void (side === "in" ? (x.transitionIn.duration = v) : (x.transitionOut.duration = v)))} />
-              )}
-            </div>
-          );
-        })}
-      </Section>
+      <TransitionSection c={c} side="transitionIn" />
+      <TransitionSection c={c} side="transitionOut" />
+      <MotionSection c={c} />
       <Section title="Keyframes">
         <div className="hint">Move the playhead and click ◆ next to a property, or drag directly in the preview (once a property has keyframes, dragging creates keyframes).</div>
         <AnimSlider c={c} prop="blur" label="Blur" min={0} max={60} base={0} setBase={(x, v) => setKeyframe(x, "blur", Math.max(0, t - c.start), v)} />
@@ -330,29 +372,144 @@ export const lookCss = (f: Partial<ReturnType<typeof defaultFilters>>) =>
   ].filter(Boolean).join(" ") || "none";
 
 function FxTab({ c }: { c: Clip }) {
+  const [adding, setAdding] = useState("");
   return (
     <>
-      <Section title="Active effects">
-        {c.effects.length === 0 && <div className="hint">No effects yet. Add one below or from the Effects panel.</div>}
-        {c.effects.map((e, i) => (
-          <div key={e.type} className="row">
-            <Slider label={EFFECTS.find((x) => x.type === e.type)?.label ?? e.type} min={0} max={100} value={e.amount}
-              onChange={(v) => upd(c, `fx${e.type}`, (x) => void (x.effects[i].amount = v))} />
-            <button className="ghost icon" onClick={() => upd(c, `fxd${Date.now()}`, (x) => void x.effects.splice(i, 1))}>×</button>
-          </div>
-        ))}
-      </Section>
-      <Section title="Add effect">
-        <div className="grid3">
-          {EFFECTS.map((e) => (
-            <div key={e.type} className="tile" onClick={() => upd(c, `fxa${Date.now()}`, (x) => {
-              x.effects = x.effects.filter((y) => y.type !== e.type);
-              x.effects.push({ type: e.type, amount: e.amount });
-            })}>{e.label}</div>
-          ))}
+      {c.kind === "adjustment" && (
+        <div className="hint" style={{ marginBottom: 8 }}>
+          This is an effect layer: its effects and color settings apply to every track below it, for as long as the layer lasts.
         </div>
+      )}
+      <Section title={`Effects (${c.effects.length})`}>
+        {c.effects.length === 0 && <div className="hint">No effects yet. Drag one from the Effects panel onto the clip, or add one here.</div>}
+        {c.effects.map((e, i) => (
+          <EffectCard key={e.type} c={c} e={e} i={i} />
+        ))}
+        <select
+          value={adding}
+          onChange={(ev) => {
+            const id = ev.target.value;
+            setAdding("");
+            if (!id) return;
+            upd(c, `fxa${Date.now()}`, (x) => {
+              x.effects = x.effects.filter((y) => y.type !== id);
+              x.effects.push(newEffect(id));
+            });
+          }}
+        >
+          <option value="">+ Add effect…</option>
+          {EFFECT_CATEGORIES.map((cat) => (
+            <optgroup key={cat} label={cat}>
+              {GL_EFFECTS.filter((g) => g.category === cat).map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+              {cat === "Camera" && EFFECTS.filter((x) => ["shake", "zoomPulse"].includes(x.type)).map((x) => <option key={x.type} value={x.type}>{x.label}</option>)}
+              {cat === "Weather & Overlays" && <option value="letterbox">Letterbox</option>}
+              {cat === "Light" && <option value="flicker">Flicker</option>}
+            </optgroup>
+          ))}
+        </select>
       </Section>
     </>
+  );
+}
+
+function EffectCard({ c, e, i }: { c: Clip; e: Effect; i: number }) {
+  const def = effectDef(e.type);
+  const setP = (k: string, v: number | string) => upd(c, `fxp${e.type}${k}`, (x) => void (x.effects[i].params = { ...x.effects[i].params, [k]: v }));
+  return (
+    <Section
+      title={effectLabel(e.type)}
+      fid={e.type}
+      right={
+        <span style={{ display: "flex", gap: 2 }}>
+          <Toggle label="" value={e.enabled !== false} onChange={(v) => upd(c, `fxe${e.type}`, (x) => void (x.effects[i].enabled = v))} />
+          <button className="ghost icon" title="Move up" disabled={i === 0} onClick={() => upd(c, `fxu${Date.now()}`, (x) => void x.effects.splice(i - 1, 0, x.effects.splice(i, 1)[0]))}>↑</button>
+          <button className="ghost icon" title="Remove" onClick={() => upd(c, `fxd${Date.now()}`, (x) => void x.effects.splice(i, 1))}>×</button>
+        </span>
+      }
+    >
+      <Slider label="Amount" min={0} max={100} value={e.amount} onChange={(v) => upd(c, `fx${e.type}`, (x) => void (x.effects[i].amount = v))} />
+      {def?.params?.map((pdef) => (
+        <Slider key={pdef.key} label={pdef.label} min={pdef.min} max={pdef.max} step={pdef.step ?? 1} value={e.params?.[pdef.key] ?? pdef.def}
+          onChange={(v) => setP(pdef.key, v)} onReset={() => setP(pdef.key, pdef.def)} />
+      ))}
+      {def?.colors?.map((cd) => (
+        <Field key={cd.key} label={cd.label}><Color value={e.params?.[cd.key] ?? cd.def} onChange={(v) => setP(cd.key, v)} /></Field>
+      ))}
+    </Section>
+  );
+}
+
+function TransitionSection({ c, side }: { c: Clip; side: "transitionIn" | "transitionOut" }) {
+  const p = useStore((s) => s.project);
+  const tr = c[side];
+  const partner = side === "transitionIn" ? prevAdjacent(p, c) : nextAdjacent(p, c);
+  const title = side === "transitionIn" ? "Transition in" : "Transition out";
+  const hint = side === "transitionIn"
+    ? partner ? `Blends from “${partner.name}” into this clip, centered on the cut.` : "Reveals this clip (nothing directly before it on this track)."
+    : partner ? `The next clip has its own “Transition in”; use that for this cut.` : "Hides this clip at its end.";
+  return (
+    <Section title={title} fid={side}>
+      <div className="hint">{hint}</div>
+      <Field label="Type">
+        <select value={tr.type} onChange={(e) => upd(c, `tr${side}`, (x) => void (x[side] = { type: e.target.value, duration: x[side].duration || 1 }))}>
+          <option value="none">None</option>
+          {TRANSITION_CATEGORIES.map((cat) => (
+            <optgroup key={cat} label={cat}>
+              {TRANSITION_DEFS.filter((t) => t.category === cat).map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </Field>
+      {tr.type !== "none" && (
+        <Slider label="Duration" min={0.1} max={Math.min(5, c.duration)} step={0.05} value={tr.duration} unit="s"
+          onChange={(v) => upd(c, `trd${side}`, (x) => void (x[side].duration = v))} />
+      )}
+    </Section>
+  );
+}
+
+function MotionSection({ c }: { c: Clip }) {
+  const p = useStore((s) => s.project);
+  const t = useStore((s) => s.currentTime);
+  const pick = useStore((s) => s.pick);
+  const [preset, setPreset] = useState<MotionPreset>("zoomIn");
+  const [amount, setAmount] = useState(1.35);
+  const [dur, setDur] = useState(1);
+  const [from, setFrom] = useState<"playhead" | "start">("playhead");
+  const [whole, setWhole] = useState(false);
+  const [focus, setFocus] = useState({ x: p.width / 2, y: p.height / 2 });
+  const [ease, setEase] = useState<Easing>("easeInOut");
+  const local = from === "start" ? 0 : Math.min(Math.max(0, t - c.start), Math.max(0, c.duration - 0.1));
+  const length = whole ? c.duration - local : Math.min(dur, c.duration - local);
+  const apply = () =>
+    useStore.getState().updateClip(c.id, (x, pp) => applyMotion(x, pp, { preset, start: local, duration: length, amount, focusX: focus.x, focusY: focus.y, ease }));
+  return (
+    <Section title="Zoom & pan" fid="motion">
+      <div className="hint">Zoom into any point of the frame or pan across it — like a camera move inside the clip. Creates keyframes you can fine-tune below.</div>
+      <Field label="Move">
+        <Select value={preset} options={MOTION_PRESETS} onChange={setPreset} />
+      </Field>
+      <Slider label="Zoom" min={1.05} max={4} step={0.01} value={amount} unit="×" onChange={setAmount} />
+      <Field label="Starts at">
+        <Select value={from} options={[["playhead", `Playhead (${local.toFixed(2)}s into clip)`], ["start", "Clip start"]]} onChange={setFrom} />
+      </Field>
+      <Toggle label="Until the end of the clip" value={whole} onChange={setWhole} />
+      {!whole && <Slider label="Duration" min={0.1} max={Math.max(0.2, c.duration)} step={0.05} value={dur} unit="s" onChange={setDur} />}
+      <Field label="Easing"><Select value={ease} options={EASINGS} onChange={setEase} /></Field>
+      <Field label="Focus point">
+        <span className="hint">{Math.round((focus.x / p.width) * 100)}%, {Math.round((focus.y / p.height) * 100)}%</span>
+        <button
+          className={pick ? "active" : ""}
+          onClick={() => useStore.getState().set({ pick: { label: "Click the point to zoom into", cb: (x, y) => setFocus({ x, y }) } })}
+        >
+          🎯 Pick on preview
+        </button>
+      </Field>
+      <div className="row" style={{ gap: 6 }}>
+        <button className="primary" onClick={apply}>Apply move</button>
+        <button onClick={() => upd(c, `mclear${Date.now()}`, (x) => clearMotion(x))}>Clear zoom & pan</button>
+      </div>
+    </Section>
   );
 }
 
@@ -406,17 +563,7 @@ function AudioTab({ c }: { c: Clip }) {
           <button onClick={() => run("Ducked under speech sections", () => autoDuck(c.id))}>🎚 Auto-duck</button>
           <button onClick={() => run("Beats found", () => beatsToMarkers(c.id))}>🥁 Beats → markers</button>
           {c.kind === "video" && (
-            <button onClick={() => {
-              const st = useStore.getState();
-              const trackId = st.ensureTrackFor("audio", c.start, c.duration);
-              const ac = makeClip(st.project, "audio", trackId, c.start, c.duration, {
-                mediaId: c.mediaId, name: `${c.name} (audio)`, offset: c.offset, speed: c.speed, audio: { ...c.audio },
-              });
-              ac.keyframes = c.keyframes.volume ? { volume: structuredClone(c.keyframes.volume) } : {};
-              st.addClip(ac);
-              st.updateClip(c.id, (x) => void (x.audio.muted = true));
-              st.notify("Audio detached from video", "ok");
-            }}>🔊 Detach audio</button>
+            <button onClick={() => detachAudio(c)}>🔊 Detach audio</button>
           )}
           {c.kind === "video" && <button onClick={() => scenesForClip(c.id, false).then((n) => s.notify(`${n} scenes found`, "ok")).catch((e) => s.notify(e.message, "error"))}>🎞 Detect scenes</button>}
         </div>
