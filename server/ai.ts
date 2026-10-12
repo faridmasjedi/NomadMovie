@@ -134,7 +134,7 @@ interface Turn {
 function callJSON(system: string, turns: Turn[], schema: object, effort: Effort = "medium", t = savedTarget()) {
   const name = PROVIDERS[t.provider].label;
   if (!aiAvailable(t)) {
-    if (t.provider === "claude-code") throw new Error("Claude Code is not installed. Install it (npm i -g @anthropic-ai/claude-code) and run `claude` once to sign in, or pick another AI in Settings.");
+    if (t.provider === "claude-code") throw new Error("To use your Claude subscription, open Settings (⚙) → Claude subscription and click “Set up”. Or pick another AI there.");
     if (t.provider === "custom") throw new Error("Set the address and model of your AI service in Settings.");
     throw new Error(`No API key for ${name}. Open Settings (⚙) and add one.`);
   }
@@ -281,7 +281,7 @@ export async function testProvider(o: { provider: Provider; key?: string; model?
  */
 async function callClaudeCode(system: string, turns: Turn[], schema: object, effort: Effort, model: string) {
   const bin = findClaude();
-  if (!bin) throw new Error("Claude Code is not installed. Install it (npm i -g @anthropic-ai/claude-code), run `claude` once to sign in, or pick another AI in Settings.");
+  if (!bin) throw new Error("To use your Claude subscription, open Settings (⚙) → Claude subscription and click “Set up”. Or pick another AI there.");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nomad-ai-"));
   try {
     // history + current request flattened into one prompt; images are saved and read with the Read tool
@@ -336,7 +336,7 @@ async function callClaudeCode(system: string, turns: Turn[], schema: object, eff
     }
     if (res.is_error) {
       const msg = String(res.result ?? res.subtype ?? "unknown error");
-      if (/log ?in|auth|credential|401/i.test(msg)) throw new Error(`Claude Code is not signed in. Run \`claude\` in a terminal and log in with your Claude account. (${msg})`);
+      if (/log ?in|auth|credential|401/i.test(msg)) throw new Error(`You're not signed in to Claude. Open Settings (⚙) → Claude subscription → “Sign in with Claude”. (${msg})`);
       throw new Error(`Claude Code: ${msg}`);
     }
     if (res.structured_output) return res.structured_output;

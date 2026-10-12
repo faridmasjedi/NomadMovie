@@ -56,7 +56,7 @@ Open **⚙ Settings → AI assistant** in the app and pick one. Use **Test conne
 
 | Option | What you need | Cost |
 | --- | --- | --- |
-| **Claude subscription** | A Claude Pro or Max plan and [Claude Code](https://docs.claude.com/en/docs/claude-code) installed (`npm i -g @anthropic-ai/claude-code`, then run `claude` once to sign in) | Included in your plan |
+| **Claude subscription** | A Claude Pro or Max plan. Click **Set up** and **Sign in with Claude** in the app: it installs [Claude Code](https://docs.claude.com/en/docs/claude-code) for you and signs in through your browser | Included in your plan |
 | **Claude API** | A key from [console.anthropic.com](https://console.anthropic.com/settings/keys) | Pay per use |
 | **ChatGPT / OpenAI** | A key from [platform.openai.com](https://platform.openai.com/api-keys) | Pay per use |
 | **Google Gemini** | A key from [Google AI Studio](https://aistudio.google.com/apikey) | Free tier available |

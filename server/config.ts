@@ -144,6 +144,12 @@ export function claudeEnv() {
 
 let statusCache: { at: number; value: { found: boolean; loggedIn: boolean; account?: string } } | null = null;
 
+/** forget what we know about Claude Code (after installing it or signing in) */
+export function resetClaudeCache() {
+  claudePath = undefined;
+  statusCache = null;
+}
+
 export function claudeStatus(): Promise<{ found: boolean; loggedIn: boolean; account?: string }> {
   if (statusCache && Date.now() - statusCache.at < 30_000) return Promise.resolve(statusCache.value);
   const bin = findClaude();

@@ -78,7 +78,7 @@ export function AIPanel() {
         <div className="ai-card" style={{ borderColor: "var(--warn)", marginBottom: 10 }}>
           <div className="hint">
             {h.provider === "claude-code" && h.claudeCode.found
-              ? <>Claude Code is installed but not signed in. Run <span className="kbd">claude</span> in a terminal and log in — or pick another AI.</>
+              ? <>Sign in to your Claude account to use your subscription — or pick another AI.</>
               : <>Connect an AI to edit by chatting: your Claude subscription, an API key (Claude, ChatGPT, Gemini, OpenRouter), or a free local model.</>}
             <div style={{ margin: "8px 0" }}>
               <button className="primary" onClick={() => useStore.getState().set({ settingsOpen: true })}>Connect an AI</button>
