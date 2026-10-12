@@ -6,7 +6,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
 import { aiAssist, aiSubtitles, aiAvailable, listModels, testProvider } from "./ai.ts";
-import { claudeStatus, findClaude, getConfig, modelFor, PROVIDERS, saveConfig, urlFor, type Config, type Provider } from "./config.ts";
+import { claudeStatus, dataDir, findClaude, getConfig, modelFor, PROVIDERS, saveConfig, urlFor, type Config, type Provider } from "./config.ts";
 import { registerImport } from "./importer.ts";
 import { cancelSetup, installClaude, setupState, startLogin, submitCode } from "./claudeSetup.ts";
 
@@ -88,6 +88,27 @@ export function createApp(opts: { staticDir?: string } = {}) {
   const app = express();
   app.use("/api/ai", express.json({ limit: "25mb" }));
   app.use("/api/settings", express.json());
+  app.use("/api/presets", express.json({ limit: "20mb" }));
+
+  // the user's saved clip presets ("My presets"), kept with the app's settings so every project can use them
+  const presetsFile = () => path.join(dataDir(), "presets.json");
+  app.get("/api/presets", (_req, res) => {
+    try {
+      res.json(JSON.parse(fs.readFileSync(presetsFile(), "utf8")));
+    } catch {
+      res.json({ presets: [] });
+    }
+  });
+  app.put("/api/presets", (req, res) => {
+    const presets = (req.body as { presets?: unknown })?.presets;
+    if (!Array.isArray(presets)) return res.status(400).json({ error: "presets must be a list" });
+    fs.mkdirSync(dataDir(), { recursive: true });
+    // write to a temp file first so a crash never leaves a half-written file
+    const tmp = `${presetsFile()}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ presets }, null, 1));
+    fs.renameSync(tmp, presetsFile());
+    res.json({ ok: true });
+  });
 
   app.get("/api/health", async (_req, res) => {
     const cfg = getConfig();

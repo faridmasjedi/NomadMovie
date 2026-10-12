@@ -329,3 +329,16 @@ input[type="range"] { accent-color: var(--accent); min-width: 0; direction: ltr;
 .ai-detail a { color: var(--accent2); }
 .claude-setup { display: flex; flex-direction: column; gap: 8px; }
 .spin.inline { display: inline-block; vertical-align: -2px; margin-right: 4px; border-color: rgba(255,255,255,0.25); border-top-color: var(--accent2); }
+
+/* my presets */
+.preset-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.preset-bar select { flex: 1; min-width: 0; }
+.preset-bar button { white-space: nowrap; }
+.preset-parts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.preset-parts .check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; cursor: pointer; }
+.preset-parts input { accent-color: var(--accent); }
+.preset-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; margin-top: 6px; }
+.preset-row { display: flex; gap: 8px; align-items: center; }
+.preset-row input { flex: 1; min-width: 0; }
+.preset-row .hint { white-space: nowrap; }
+.modal > input { width: 100%; box-sizing: border-box; }

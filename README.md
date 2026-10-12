@@ -30,6 +30,9 @@ and let an AI assistant do the tedious parts — with the AI you already use.
 ### Editing
 Multi-track video and audio timeline · drag and drop · split, trim, ripple delete · snapping and markers · copy, paste, duplicate · unlimited undo · lock, hide and mute tracks · autosave · project files · any video, audio or photo format (MP4, MOV, MKV, WebM, ProRes, HEVC, HEIC, RAW, PSD…).
 
+### My presets
+Set up a clip the way you like (color, effects, animation, size and position, crop, mask, audio, speed or text style), click **Save as preset**, and apply it to any clip later from **★ My presets** in the sidebar. You can apply it to many clips at once, and the AI assistant can use your presets too. Presets work in every project and can be exported to share.
+
 ### Motion graphics
 Text with style presets and 7 bundled fonts · shapes and gradients · keyframes for position, scale, rotation, opacity and blur with 8 easing curves · 14 in/out animation presets (typewriter, word by word, pop…) · zoom and pan moves · freeze frames · photo slideshows.
 

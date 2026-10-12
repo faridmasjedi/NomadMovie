@@ -15,6 +15,7 @@ import { defaultFilters, fmtTime } from "../factory";
 import { addMaskKey, keyAt, removeMaskKey } from "../engine/mask";
 import { cropToMask, stopTracking, trackMask } from "../ai/maskTools";
 import type { MaskTool } from "../store";
+import { PresetBar } from "./PresetBar";
 
 type Tab = "basic" | "anim" | "color" | "fx" | "audio" | "speed";
 
@@ -50,6 +51,7 @@ export function Inspector() {
         ))}
       </div>
       <div className="panel-body">
+        <PresetBar clips={[clip]} />
         {active === "basic" && <BasicTab c={clip} />}
         {active === "anim" && <AnimTab c={clip} />}
         {active === "color" && <ColorTab c={clip} />}
@@ -696,10 +698,13 @@ function SpeedTab({ c }: { c: Clip }) {
 function ProjectSettings({ multi }: { multi: number }) {
   const p = useStore((s) => s.project);
   const commit = useStore((s) => s.commit);
+  const selected = useStore((s) => s.selected);
+  const selClips = p.clips.filter((c) => selected.includes(c.id));
   return (
     <div className="panel-body">
       <div className="panel-title">{multi > 1 ? `${multi} clips selected` : "Project settings"}</div>
-      {multi > 1 && <div className="hint" style={{ marginBottom: 12 }}>You can move or delete them together.</div>}
+      {multi > 1 && <div className="hint" style={{ marginBottom: 8 }}>You can move or delete them together, or apply one of your presets to all of them.</div>}
+      {multi > 1 && <PresetBar clips={selClips} />}
       <Field label="Name"><input value={p.name} onChange={(e) => commit((x) => void (x.name = e.target.value), "pname")} /></Field>
       <div style={{ height: 6 }} />
       <Field label="Width"><input type="number" value={p.width} onChange={(e) => commit((x) => void (x.width = Math.max(16, Number(e.target.value))), "pw")} /></Field>
