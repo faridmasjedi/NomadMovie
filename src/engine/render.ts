@@ -4,6 +4,7 @@ import { getImage, getSvgImage, getVideo, pauseVideosExcept } from "./media";
 import { trackOp, isVisibleAt } from "./timeline";
 import { runTransition, runEffect } from "./gl";
 import { effectDef, hexToRgb } from "./effectsLib";
+import { applyMask, hasMask } from "./mask";
 
 export interface Bounds {
   x: number;
@@ -177,6 +178,8 @@ function applyAdjustment(out: CanvasRenderingContext2D, c: Clip, p: Project, loc
   L.drawImage(out.canvas, 0, 0);
   L.filter = "none";
   postProcess(c, c.start + local, local, scale);
+  // a masked effect layer only changes what is inside its mask
+  if (hasMask(c)) applyMask(L, c, s0(local, c), p.width, p.height, new DOMMatrix().scale(scale).translate(p.width / 2, p.height / 2), scale);
   out.save();
   out.setTransform(1, 0, 0, 1, 0, 0);
   out.globalAlpha = Math.min(1, s.opacity);
@@ -184,6 +187,8 @@ function applyAdjustment(out: CanvasRenderingContext2D, c: Clip, p: Project, loc
   out.drawImage(layerCanvas, 0, 0);
   out.restore();
 }
+
+const s0 = (local: number, c: Clip) => Math.min(Math.max(local, 0), c.duration);
 
 function cssFilter(c: Clip, s: FrameState, scale: number) {
   const f = c.filters;
@@ -291,6 +296,7 @@ function paintClip(c: Clip, p: Project, media: Record<string, MediaItem>, local:
       if (c.shape) drawShape(L, c.shape);
       break;
   }
+  if (hasMask(c)) applyMask(L, c, fl, w, h, L.getTransform(), scale);
   L.restore();
 
   if (c.chroma.enabled && (c.kind === "video" || c.kind === "image")) chromaKey(c);

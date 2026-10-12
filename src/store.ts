@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { Clip, MediaItem, Project, Track, TrackKind } from "./types";
 import { makeTrack, newProject, uid } from "./factory";
+import { maskPtsAt } from "./engine/mask";
+
+export type MaskTool = "edit" | "rect" | "ellipse" | "lasso" | "pen" | "ai";
 
 export type LeftTab = "media" | "text" | "elements" | "effects" | "transitions" | "audio" | "ai";
 
@@ -30,6 +33,10 @@ interface State {
   focus: { clipId: string; tab: string; key?: string; at: number } | null;
   /** when set, the next click on the preview reports a point in project coordinates */
   pick: { label: string; cb: (x: number, y: number) => void } | null;
+  /** drawing / editing a clip's mask on the preview; `ai` holds the clicked subject points (0..1, label) */
+  maskEdit: { clipId: string; tool: MaskTool; point?: number; ai?: [number, number, number][] } | null;
+  /** AI mask work in progress (selection or tracking) */
+  maskWork: { clipId: string; label: string; progress?: number } | null;
 
   commit: (fn: (p: Project) => void, mergeKey?: string) => void;
   setProject: (p: Project) => void;
@@ -89,6 +96,8 @@ export const useStore = create<State>((set, get) => ({
   previewQuality: 1,
   focus: null,
   pick: null,
+  maskEdit: null,
+  maskWork: null,
 
   commit: (fn, mergeKey) => {
     const { project, past } = get();
@@ -188,6 +197,12 @@ export const useStore = create<State>((set, get) => ({
           right.keyframes[k] = kfs.filter((f) => f.t >= local).map((f) => ({ ...f, t: f.t - local }));
           c.keyframes[k] = kfs.filter((f) => f.t <= local);
         }
+        // split an animated mask the same way, with a key on both sides of the cut
+        if (c.mask?.keys.length && right.mask) {
+          const at = maskPtsAt(c.mask, local).slice();
+          right.mask.keys = [{ t: 0, pts: at.slice() }, ...c.mask.keys.filter((k) => k.t > local).map((k) => ({ ...k, t: k.t - local }))];
+          c.mask.keys = [...c.mask.keys.filter((k) => k.t < local), { t: local, pts: at }];
+        }
         c.duration = local;
         c.transitionOut = { type: "none", duration: 0.5 };
         c.animOut = "none";
@@ -285,7 +300,10 @@ export const useStore = create<State>((set, get) => ({
   },
 
   select: (ids, additive) =>
-    set((s) => ({ selected: additive ? Array.from(new Set([...s.selected, ...ids])) : ids })),
+    set((s) => {
+      const selected = additive ? Array.from(new Set([...s.selected, ...ids])) : ids;
+      return { selected, maskEdit: s.maskEdit && selected.includes(s.maskEdit.clipId) ? s.maskEdit : null };
+    }),
   setTime: (t) => set({ currentTime: Math.max(0, t) }),
   setPlaying: (playing) => set({ playing }),
   setZoom: (z) => set({ zoom: Math.min(600, Math.max(4, z)) }),

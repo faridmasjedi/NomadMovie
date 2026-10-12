@@ -1,4 +1,5 @@
 import { useStore, getClip } from "../store";
+import { maskPtsAt } from "../engine/mask";
 import { detectBeats, detectScenes, normalizeGain, soundSegments } from "../engine/analysis";
 import { uid, makeClip, defaultText } from "../factory";
 import type { Clip, Keyframe } from "../types";
@@ -28,6 +29,8 @@ export function removeSilence(clipId: string) {
       part.duration = r.end - r.start;
       part.offset = orig.offset + r.start * orig.speed;
       part.keyframes = {};
+      // an animated mask keeps the outline it had at this part's start
+      if (part.mask?.keys.length) part.mask = { ...part.mask, pts: maskPtsAt(part.mask, r.start).slice(), keys: [] };
       p.clips.push(part);
       cursor += part.duration;
     }

@@ -37,6 +37,8 @@ To use an Anthropic API key instead, open **⚙ Settings → Anthropic API key**
 
 **Visuals and motion.** Text with 10 style presets, shapes and gradients, and keyframes for position, scale, rotation, opacity and blur with 8 easing curves. There are 14 in/out animation presets (typewriter, word-by-word, pop…), 15 transitions, 16 color looks plus manual color grading, and effects such as shake, glitch, RGB split, pixelate, mirror, film grain and letterbox. Also chroma key, blend modes, crop, speed ramps, and project sizes from 9:16 to 4K.
 
+**Masks and cut-outs.** Keep only part of a clip by drawing a box, an ellipse, a freehand outline or a point-by-point shape on the preview. You can drag the points, feather or expand the edge, invert the mask, and animate it with keys. On an effect layer, a mask limits the effect to that area, for example to blur one face. "Select a subject with AI" outlines a person or object from a click. It uses EdgeTAM, a fast SAM 2 model that runs locally on the GPU via WebGPU; the model (~40 MB) downloads on first use. "Track forward/back" follows the subject through the clip and keys the outline. "Crop to mask" crops the frame to the masked area.
+
 **Audio.** Volume with keyframes, fades, pan, 3-band EQ with presets, noise and hum reduction, voice enhancement, compressor, reverb and echo. You can record voice-overs, detach audio from video, remove silences automatically, normalize loudness, auto-duck music under speech, detect beats as markers, and watch a level meter.
 
 **AI (Claude).** A chat assistant edits the project from plain language: intros, lower thirds, kinetic text, color grading, cuts, audio mixing. It can also:
@@ -73,6 +75,8 @@ src/engine/audio.ts      Web Audio engine (playback, effects, offline mixdown, W
 src/engine/decoder.ts    sequential MP4/MOV decoding (mp4box + WebCodecs) for fast export
 src/engine/exporter.ts   fast WebCodecs export, with real-time capture as fallback
 src/engine/analysis.ts   silence/speech, beat, scene and loudness analysis
+src/engine/mask.ts       masks: outlines, interpolation between keys, feather/expand, compositing
+src/ai/segment.ts        AI subject selection and tracking (EdgeTAM via transformers.js, local)
 src/ai/actions.ts        runs the edit operations that Claude returns
 src/components/          UI (timeline, preview, inspector, panels)
 ```

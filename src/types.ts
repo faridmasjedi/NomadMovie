@@ -130,6 +130,30 @@ export interface ChromaKey {
   smoothness: number; // 0..100
 }
 
+/** a mask shape at one moment of an animated mask */
+export interface MaskKey {
+  /** seconds, relative to clip start */
+  t: number;
+  /** flattened [x0, y0, x1, y1, …], 0..1 of the clip's uncropped picture */
+  pts: number[];
+}
+
+/** keeps (or removes) only the area inside a closed outline */
+export interface Mask {
+  enabled: boolean;
+  /** outline used when there are no keys */
+  pts: number[];
+  /** animated outline; every key has the same number of points */
+  keys: MaskKey[];
+  /** curved outline through the points (false = straight edges) */
+  smooth: boolean;
+  feather: number; // px
+  expand: number; // px, negative shrinks
+  invert: boolean;
+  /** set by the AI selection: the outline was traced from this subject */
+  ai?: boolean;
+}
+
 export interface Clip {
   id: string;
   trackId: string;
@@ -159,6 +183,7 @@ export interface Clip {
   audio: AudioProps;
   crop: { top: number; right: number; bottom: number; left: number }; // percent
   fit: "contain" | "cover" | "stretch";
+  mask?: Mask;
   /** a static SVG image created by the AI, stored as markup */
   svg?: string;
 }

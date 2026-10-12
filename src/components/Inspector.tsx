@@ -12,6 +12,9 @@ import { EFFECTS, FONTS, LOOKS, SHAPES } from "../engine/presets";
 import { Color, Field, Section, Select, Slider, Toggle, Icon, I } from "./ui";
 import { autoDuck, normalizeClip, removeSilence, beatsToMarkers, scenesForClip } from "../ai/smart";
 import { defaultFilters, fmtTime } from "../factory";
+import { addMaskKey, keyAt, removeMaskKey } from "../engine/mask";
+import { cropToMask, stopTracking, trackMask } from "../ai/maskTools";
+import type { MaskTool } from "../store";
 
 type Tab = "basic" | "anim" | "color" | "fx" | "audio" | "speed";
 
@@ -157,6 +160,8 @@ function BasicTab({ c }: { c: Clip }) {
         </Section>
       )}
 
+      {c.kind !== "audio" && <MaskSection c={c} />}
+
       {(c.kind === "video" || c.kind === "image") && (
         <Section title="Chroma key (green screen)" defaultOpen={c.chroma.enabled}>
           <Toggle label="Enabled" value={c.chroma.enabled} onChange={(v) => upd(c, "chroma", (x) => void (x.chroma.enabled = v))} />
@@ -166,6 +171,100 @@ function BasicTab({ c }: { c: Clip }) {
         </Section>
       )}
     </>
+  );
+}
+
+/** draw / AI-select an outline and keep only what is inside it */
+function MaskSection({ c }: { c: Clip }) {
+  const edit = useStore((s) => (s.maskEdit?.clipId === c.id ? s.maskEdit : null));
+  const work = useStore((s) => (s.maskWork?.clipId === c.id ? s.maskWork : null));
+  const t = useStore((s) => s.currentTime);
+  const [every, setEvery] = useState("2");
+  const m = c.mask;
+  const local = Math.min(Math.max(0, t - c.start), c.duration);
+  const picture = (c.kind === "video" || c.kind === "image") && !c.svg;
+  const tool = (x: MaskTool) => {
+    const st = useStore.getState();
+    if (st.playing) st.setPlaying(false);
+    // the overlay needs the clip on screen
+    if (t < c.start || t >= c.start + c.duration) st.setTime(c.start + Math.min(c.duration / 2, 0.5));
+    st.set({ maskEdit: { clipId: c.id, tool: x }, selected: [c.id] });
+  };
+  const btn = (x: MaskTool, label: string, title: string) => (
+    <button className={edit?.tool === x ? "active" : ""} title={title} onClick={() => (edit?.tool === x ? useStore.getState().set({ maskEdit: null }) : tool(x))}>{label}</button>
+  );
+  const key = m ? keyAt(m, local) : undefined;
+  const jump = (dir: 1 | -1) => {
+    if (!m?.keys.length) return;
+    const k = dir > 0 ? m.keys.find((x) => x.t > local + 1e-3) : [...m.keys].reverse().find((x) => x.t < local - 1e-3);
+    if (k) useStore.getState().setTime(c.start + k.t);
+  };
+  return (
+    <Section title="Mask & cut-out" defaultOpen={!!m} fid="mask">
+      <div className="hint">
+        {c.kind === "adjustment"
+          ? "Limit this effect layer to an area — e.g. blur or brighten just one face."
+          : "Keep only part of the picture: draw around it, or let the AI select a person or object."}
+      </div>
+      <div className="mask-tools">
+        {btn("rect", "▭ Box", "Rectangle mask")}
+        {btn("ellipse", "◯ Ellipse", "Ellipse mask")}
+        {btn("lasso", "✎ Freehand", "Draw the outline freehand")}
+        {btn("pen", "⬠ Points", "Click point by point")}
+      </div>
+      {picture && (
+        <button className={`primary ${edit?.tool === "ai" ? "active" : ""}`} style={{ width: "100%" }} disabled={!!work}
+          onClick={() => (edit?.tool === "ai" ? useStore.getState().set({ maskEdit: null }) : tool("ai"))}>
+          ✨ Select a subject with AI
+        </button>
+      )}
+      {work && (
+        <>
+          <div className="hint" style={{ marginTop: 6 }}><span className="spin" style={{ display: "inline-block", verticalAlign: "middle" }} /> {work.label}</div>
+          {work.progress !== undefined && <div className="mask-progress"><i style={{ width: `${Math.round(work.progress * 100)}%` }} /></div>}
+          {work.progress !== undefined && <button onClick={stopTracking}>■ Stop</button>}
+        </>
+      )}
+      {m && (
+        <>
+          <div className="row" style={{ gap: 6, marginTop: 8 }}>
+            <button className={edit?.tool === "edit" ? "active" : ""} onClick={() => (edit?.tool === "edit" ? useStore.getState().set({ maskEdit: null }) : tool("edit"))}>✏ Edit outline</button>
+            <button onClick={() => cropToMask(c.id)} title="Cut the frame down to the box around the mask">⛶ Crop to mask</button>
+            <button className="ghost" title="Delete mask" onClick={() => { useStore.getState().set({ maskEdit: null }); upd(c, `maskdel${Date.now()}`, (x) => void delete x.mask); }}>🗑</button>
+          </div>
+          <Toggle label="Enabled" value={m.enabled} onChange={(v) => upd(c, "mask-on", (x) => void (x.mask!.enabled = v))} />
+          <Toggle label={c.kind === "adjustment" ? "Invert (affect everything outside)" : "Invert (remove the inside)"} value={m.invert} onChange={(v) => upd(c, "mask-inv", (x) => void (x.mask!.invert = v))} />
+          <Toggle label="Curved edges" value={m.smooth} onChange={(v) => upd(c, "mask-smooth", (x) => void (x.mask!.smooth = v))} />
+          <Slider label="Feather" min={0} max={200} value={m.feather} unit="px" onChange={(v) => upd(c, "mask-feather", (x) => void (x.mask!.feather = v))} onReset={() => upd(c, "mask-feather", (x) => void (x.mask!.feather = 0))} />
+          <Slider label="Expand" min={-100} max={100} value={m.expand} unit="px" onChange={(v) => upd(c, "mask-expand", (x) => void (x.mask!.expand = v))} onReset={() => upd(c, "mask-expand", (x) => void (x.mask!.expand = 0))} />
+          <Field label="Animate">
+            <button className={`kf-btn ${key ? "on" : m.keys.length ? "has" : ""}`} title={key ? "Remove the mask key here" : "Add a mask key at the playhead"}
+              onClick={() => upd(c, `maskkey${Date.now()}`, (x) => (key ? removeMaskKey(x.mask!, local) : addMaskKey(x.mask!, local)))}>
+              <Icon d={I.diamond} size={12} />
+            </button>
+            <button className="ghost icon" title="Previous key" disabled={!m.keys.length} onClick={() => jump(-1)}>‹</button>
+            <button className="ghost icon" title="Next key" disabled={!m.keys.length} onClick={() => jump(1)}>›</button>
+            <span className="hint">{m.keys.length ? `${m.keys.length} keys` : "static"}</span>
+            {m.keys.length > 0 && (
+              <button className="ghost" style={{ fontSize: 11 }} onClick={() => upd(c, `maskkeys0${Date.now()}`, (x) => { x.mask!.pts = keyAt(x.mask!, local)?.pts ?? x.mask!.keys[0].pts; x.mask!.keys = []; })}>Clear</button>
+            )}
+          </Field>
+          <div className="hint">With keys, editing the outline sets a key at the playhead and the mask moves smoothly between keys.</div>
+          {c.kind === "video" && (
+            <>
+              <Field label="Track subject">
+                <Select value={every} options={[["1", "Every frame"], ["2", "Every 2nd frame"], ["3", "Every 3rd frame"], ["5", "Every 5th frame"]]} onChange={setEvery} />
+              </Field>
+              <div className="row" style={{ gap: 6 }}>
+                <button disabled={!!work} title="Follow the subject from the playhead back to the clip start" onClick={() => trackMask(c.id, -1, Number(every))}>◀ Track back</button>
+                <button disabled={!!work} title="Follow the subject from the playhead to the clip end" onClick={() => trackMask(c.id, 1, Number(every))}>Track forward ▶</button>
+              </div>
+              <div className="hint">AI tracking follows the masked person or object through the clip and keys the outline as it moves.</div>
+            </>
+          )}
+        </>
+      )}
+    </Section>
   );
 }
 

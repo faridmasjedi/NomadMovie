@@ -377,7 +377,10 @@ const ClipView = memo(function ClipView({
 }) {
   const [drop, setDrop] = useState<null | "l" | "m" | "r">(null);
   const w = Math.max(4, c.duration * zoom);
-  const kfTimes = Array.from(new Set(Object.entries(c.keyframes).filter(([k]) => k !== "volume").flatMap(([, k]) => k!.map((f) => f.t))));
+  const kfTimes = Array.from(new Set([
+    ...Object.entries(c.keyframes).filter(([k]) => k !== "volume").flatMap(([, k]) => k!.map((f) => f.t)),
+    ...(c.mask?.keys.length && c.mask.keys.length <= 60 ? c.mask.keys.map((k) => k.t) : []),
+  ]));
   const label = c.kind === "text" ? c.text?.content.split("\n")[0] : c.name;
   const sound = (c.kind === "audio" || c.kind === "video") && !!m?.hasAudio;
   const relOf = (e: React.DragEvent) => {

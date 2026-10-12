@@ -296,3 +296,22 @@ input[type="range"] { accent-color: var(--accent); min-width: 0; direction: ltr;
 .sel-box .h.side.b { bottom: -5px; left: calc(50% - 4px); cursor: ns-resize; }
 .pick-banner { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); background: var(--accent); color: white; padding: 4px 6px 4px 12px; border-radius: 16px; font-size: 12px; display: flex; gap: 6px; align-items: center; z-index: 5; }
 .pick-banner button { color: white; padding: 1px 8px; }
+
+/* mask editing on the preview */
+.mask-svg { position: absolute; left: 0; top: 0; overflow: visible; touch-action: none; }
+.mask-outline { fill: none; stroke: #fff; paint-order: stroke; filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000); pointer-events: none; }
+.mask-outline.editing { fill: rgba(124, 92, 255, 0.07); cursor: move; pointer-events: all; }
+.mask-draft { fill: rgba(255, 255, 255, 0.1); stroke: var(--accent2); stroke-dasharray: 6 4; pointer-events: none; }
+.mask-handle { fill: #fff; stroke: var(--accent); cursor: grab; }
+.mask-handle.sel { fill: var(--accent2); }
+.mask-handle.first { fill: var(--accent2); stroke: #fff; }
+.mask-mid { fill: var(--accent); opacity: 0.6; cursor: copy; }
+.mask-mid:hover { opacity: 1; }
+.mask-ai { stroke: #fff; pointer-events: none; }
+.mask-ai.pos { fill: #22c55e; }
+.mask-ai.neg { fill: #ef4444; }
+.pick-banner .spin { width: 12px; height: 12px; }
+.mask-tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 6px 0; }
+.mask-tools button { font-size: 11px; padding: 6px 2px; }
+.mask-progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 6px 0; }
+.mask-progress i { display: block; height: 100%; background: var(--accent); }

@@ -8,6 +8,7 @@ import { fmtTime, projectDuration } from "../factory";
 import { pause, seek, tick, toggle } from "../engine/playback";
 import { snapshotPng, download } from "../engine/exporter";
 import { Icon, I } from "./ui";
+import { MaskOverlay } from "./MaskOverlay";
 
 let dirty = true;
 export const markDirty = () => (dirty = true);
@@ -24,6 +25,8 @@ export function Preview() {
   const selected = useStore((s) => s.selected);
   const loop = useStore((s) => s.loop);
   const pick = useStore((s) => s.pick);
+  const maskEdit = useStore((s) => s.maskEdit);
+  const maskClip = maskEdit ? project.clips.find((c) => c.id === maskEdit.clipId) : undefined;
   const [, force] = useState(0);
   const meterRef = useRef<HTMLDivElement>(null);
   const tcRef = useRef<HTMLSpanElement>(null);
@@ -180,7 +183,8 @@ export function Preview() {
               🎯 {pick.label} <button className="ghost" onClick={(e) => { e.stopPropagation(); useStore.getState().set({ pick: null }); }}>Cancel</button>
             </div>
           )}
-          {b && !playing && !pick && (
+          {maskClip && !playing && !pick && <MaskOverlay clip={maskClip} k={k} W={project.width} H={project.height} />}
+          {b && !playing && !pick && !maskClip && (
             <div
               className="sel-box"
               style={{

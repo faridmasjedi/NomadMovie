@@ -25,6 +25,7 @@
     "@fontsource/playfair-display": "^5.3.0",
     "@fontsource/roboto-mono": "^5.3.0",
     "@fontsource/vazirmatn": "^5.3.0",
+    "@huggingface/transformers": "^4.3.1",
     "@types/express": "^4.17.21",
     "@types/node": "^26.6.5",
     "@types/react": "^18.3.12",
