@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Clip, MediaItem, Project, Track, TrackKind } from "./types";
 import { makeTrack, newProject, uid } from "./factory";
 import { maskPtsAt } from "./engine/mask";
+import { setParent } from "./engine/rig";
 
 export type MaskTool = "edit" | "rect" | "ellipse" | "lasso" | "pen" | "ai";
 
@@ -160,7 +161,10 @@ export const useStore = create<State>((set, get) => ({
 
   deleteClips: (ids, ripple = false) => {
     if (!ids.length) return;
+    const t = get().currentTime;
     get().commit((p) => {
+      // clips following a deleted clip are detached first, so they stay where they are
+      for (const c of p.clips) if (c.parentId && ids.includes(c.parentId) && !ids.includes(c.id)) setParent(c, null, p, t);
       const removed = p.clips.filter((c) => ids.includes(c.id));
       p.clips = p.clips.filter((c) => !ids.includes(c.id));
       if (ripple) {
@@ -194,6 +198,8 @@ export const useStore = create<State>((set, get) => ({
         right.transitionIn = { type: "none", duration: 0.5 };
         right.animIn = "none";
         right.audio.fadeIn = 0;
+        // motion presets carry on where they were instead of restarting
+        right.behaviors = c.behaviors?.map((b) => ({ ...b, delay: (b.delay ?? 0) + local }));
         // split keyframes
         for (const k of Object.keys(c.keyframes) as (keyof Clip["keyframes"])[]) {
           const kfs = c.keyframes[k]!;

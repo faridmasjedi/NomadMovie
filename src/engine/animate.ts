@@ -1,4 +1,5 @@
 import type { AnimPreset, AnimProp, Clip, Easing, Keyframe } from "../types";
+import { applyBehaviors } from "./behaviors";
 
 export const EASE: Record<Easing, (t: number) => number> = {
   linear: (t) => t,
@@ -99,6 +100,7 @@ export function frameState(c: Clip, local: number, W: number, H: number): FrameS
   if (c.animIn !== "none" && local < c.animInDur) applyPreset(s, c.animIn, Math.max(0, local / c.animInDur), W, H);
   const fromEnd = c.duration - local;
   if (c.animOut !== "none" && fromEnd < c.animOutDur) applyPreset(s, c.animOut, Math.max(0, fromEnd / c.animOutDur), W, H);
+  applyBehaviors(s, c.behaviors, local, W, H);
   return s;
 }
 

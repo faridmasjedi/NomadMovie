@@ -5,6 +5,7 @@ import { trackOp, isVisibleAt } from "./timeline";
 import { runTransition, runEffect } from "./gl";
 import { effectDef, hexToRgb } from "./effectsLib";
 import { applyMask, hasMask } from "./mask";
+import { lottieFrame } from "./lottie";
 
 export interface Bounds {
   x: number;
@@ -206,6 +207,25 @@ function cssFilter(c: Clip, s: FrameState, scale: number) {
   return parts.length ? parts.join(" ") : "none";
 }
 
+/**
+ * A parented clip's transform is relative to its parent (and the parent's own parents): turn it into frame
+ * coordinates. Like After Effects, opacity is not inherited.
+ */
+export function toWorld(s: { x: number; y: number; sx: number; sy: number; rotation: number }, c: Clip, p: Project, t: number, depth = 0) {
+  if (!c.parentId || depth > 8) return;
+  const par = p.clips.find((x) => x.id === c.parentId);
+  if (!par || par.id === c.id) return;
+  const ps = frameState(par, Math.min(Math.max(t - par.start, 0), Math.max(0, par.duration - 1e-4)), p.width, p.height);
+  toWorld(ps, par, p, t, depth + 1);
+  const r = (ps.rotation * Math.PI) / 180, cos = Math.cos(r), sin = Math.sin(r);
+  const lx = s.x * ps.sx, ly = s.y * ps.sy;
+  s.x = ps.x + lx * cos - ly * sin;
+  s.y = ps.y + lx * sin + ly * cos;
+  s.rotation += ps.rotation;
+  s.sx *= ps.sx;
+  s.sy *= ps.sy;
+}
+
 export function contentSize(c: Clip, m: MediaItem | undefined, W: number, H: number): [number, number] {
   if (c.kind === "text" && c.text) return measureText(c.text);
   if (c.kind === "shape" && c.shape) return [c.shape.width, c.shape.height];
@@ -248,10 +268,19 @@ function paintClip(c: Clip, p: Project, media: Record<string, MediaItem>, local:
       if (noise(Math.floor(t * 20), 4) < a * 0.5) s.opacity *= 0.55;
     }
   }
+  toWorld(s, c, p, t);
   if (s.opacity <= 0.001 || s.sx === 0 || s.sy === 0) return null;
 
   const [w, h] = contentSize(c, m, W, H);
-  if (local >= 0 && local < c.duration) lastBounds.set(c.id, { x: s.x, y: s.y, w, h, sx: s.sx, sy: s.sy, rotation: s.rotation });
+  // (s.x, s.y) is where the anchor point sits; the picture's center is offset from it
+  const ax = c.anchor?.x ?? 0.5, ay = c.anchor?.y ?? 0.5;
+  const offX = (0.5 - ax) * w, offY = (0.5 - ay) * h;
+  if (local >= 0 && local < c.duration) {
+    const r = (s.rotation * Math.PI) / 180;
+    const cx = s.x + (offX * s.sx) * Math.cos(r) - (offY * s.sy) * Math.sin(r);
+    const cy = s.y + (offX * s.sx) * Math.sin(r) + (offY * s.sy) * Math.cos(r);
+    lastBounds.set(c.id, { x: cx, y: cy, w, h, sx: s.sx, sy: s.sy, rotation: s.rotation });
+  }
 
   // ---- draw into the layer
   const L = layer;
@@ -265,6 +294,7 @@ function paintClip(c: Clip, p: Project, media: Record<string, MediaItem>, local:
   L.translate(s.x, s.y);
   L.rotate((s.rotation * Math.PI) / 180);
   L.scale(s.sx, s.sy);
+  if (offX || offY) L.translate(offX, offY);
   L.filter = cssFilter(c, s, scale * Math.abs(s.sx));
 
   switch (c.kind) {
@@ -281,6 +311,11 @@ function paintClip(c: Clip, p: Project, media: Record<string, MediaItem>, local:
       break;
     }
     case "image": {
+      if (m?.lottie) {
+        const f = lottieFrame(m, c.offset + Math.max(0, local) * c.speed);
+        if (f) drawMedia(L, f, c, w, h, f.width, f.height);
+        break;
+      }
       const img = c.svg ? getSvgImage(c.svg) : m ? getImage(m.id, m.url) : null;
       if (img && img.complete && img.naturalWidth) drawMedia(L, img, c, w, h, img.naturalWidth, img.naturalHeight);
       break;
@@ -664,6 +699,22 @@ function splitRGB(w: number, h: number, off: number) {
   layer.drawImage(tmpCanvas, 0, 0);
 }
 
+const probe = document.createElement("canvas");
+probe.width = probe.height = 5;
+const probeCtx = probe.getContext("2d", { willReadFrequently: true })!;
+
+/** is an SVG graphic drawn at (u, v) (0..1 of its box)? Illustration layers fill the whole artboard, so this picks the part under the pointer */
+function opaqueAt(svg: string, u: number, v: number) {
+  const img = getSvgImage(svg);
+  if (!img.complete || !img.naturalWidth) return true;
+  probeCtx.clearRect(0, 0, 5, 5);
+  // a 5×5 neighbourhood, so thin lines are still easy to click
+  probeCtx.drawImage(img, 2 - u * img.naturalWidth, 2 - v * img.naturalHeight);
+  const d = probeCtx.getImageData(0, 0, 5, 5).data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 8) return true;
+  return false;
+}
+
 /** hit-test in project coords: returns topmost clip id */
 export function hitTest(p: Project, x: number, y: number): string | null {
   const order = p.tracks.filter((t) => t.kind === "video" && !t.hidden && !t.locked).map((t) => t.id);
@@ -677,7 +728,8 @@ export function hitTest(p: Project, x: number, y: number): string | null {
     const dx = x - b.x, dy = y - b.y;
     const lx = (dx * Math.cos(r) - dy * Math.sin(r)) / b.sx;
     const ly = (dx * Math.sin(r) + dy * Math.cos(r)) / b.sy;
-    if (Math.abs(lx) <= b.w / 2 && Math.abs(ly) <= b.h / 2 && (!best || rank < best.rank)) best = { id, rank };
+    if (Math.abs(lx) <= b.w / 2 && Math.abs(ly) <= b.h / 2 && (!best || rank < best.rank) && (!c.svg || opaqueAt(c.svg, lx / b.w + 0.5, ly / b.h + 0.5)))
+      best = { id, rank };
   }
   return best?.id ?? null;
 }

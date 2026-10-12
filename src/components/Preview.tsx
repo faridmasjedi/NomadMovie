@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../store";
-import { renderFrame, lastBounds, hitTest } from "../engine/render";
+import { renderFrame, lastBounds, hitTest, toWorld } from "../engine/render";
+import { frameState } from "../engine/animate";
 import { setFrameReadyListener } from "../engine/media";
+import { setLottieReadyListener } from "../engine/lottie";
 import { audioEngine } from "../engine/audio";
 import { setKeyframe, valueAt } from "../engine/animate";
 import { fmtTime, projectDuration } from "../factory";
@@ -48,6 +50,7 @@ export function Preview() {
   useEffect(() => {
     previewCanvas = canvasRef.current;
     setFrameReadyListener(markDirty);
+    setLottieReadyListener(markDirty);
     const unsub = useStore.subscribe(() => (dirty = true));
     let raf = 0;
     let frame = 0;
@@ -89,6 +92,8 @@ export function Preview() {
   const k = fit.w / project.width;
   const selId = selected.length === 1 ? selected[0] : null;
   const b = selId ? lastBounds.get(selId) : undefined;
+  const selClip = selId ? project.clips.find((c) => c.id === selId) : undefined;
+  const anc = selClip?.anchor;
 
   /** stage interactions: select + move / scale / rotate */
   const onPointerDown = (e: React.PointerEvent, mode: "move" | "scale" | "rotate" | "sx" | "sy" = "move") => {
@@ -120,6 +125,17 @@ export function Preview() {
     const local = st.currentTime - clip.start;
     const animated = (p: "x" | "y" | "rotation" | "scale") => !!clip.keyframes[p]?.length;
     const kfBase = { x: bounds.x, y: bounds.y };
+    // keyframed position at the start of the drag, in the clip's own space (relative to its parent, at its anchor)
+    const x0 = valueAt(clip.keyframes.x, local, clip.transform.x), y0 = valueAt(clip.keyframes.y, local, clip.transform.y);
+    // a parent's rotation and scale, to turn screen movement into the clip's own space
+    const par = clip.parentId ? st.project.clips.find((x) => x.id === clip.parentId) : undefined;
+    const ps = par ? frameState(par, Math.min(Math.max(st.currentTime - par.start, 0), par.duration), st.project.width, st.project.height) : null;
+    if (par && ps) toWorld(ps, par, st.project, st.currentTime);
+    const toLocalDelta = (dx: number, dy: number): [number, number] => {
+      if (!ps) return [dx, dy];
+      const r = (ps.rotation * Math.PI) / 180;
+      return [(dx * Math.cos(r) + dy * Math.sin(r)) / (ps.sx || 1), (-dx * Math.sin(r) + dy * Math.cos(r)) / (ps.sy || 1)];
+    };
     const kfScale0 = valueAt(clip.keyframes.scale, local, 1);
     const d0 = Math.hypot(start.x - bounds.x, start.y - bounds.y) || 1;
     const a0 = Math.atan2(start.y - bounds.y, start.x - bounds.x);
@@ -133,10 +149,11 @@ export function Preview() {
           const W = useStore.getState().project.width, H = useStore.getState().project.height;
           if (Math.abs(nx - W / 2) < 12 / k) nx = W / 2;
           if (Math.abs(ny - H / 2) < 12 / k) ny = H / 2;
-          if (animated("x")) setKeyframe(c, "x", local, nx);
-          else c.transform.x = orig.x + (nx - kfBase.x);
-          if (animated("y")) setKeyframe(c, "y", local, ny);
-          else c.transform.y = orig.y + (ny - kfBase.y);
+          const [dx, dy] = toLocalDelta(nx - kfBase.x, ny - kfBase.y);
+          if (animated("x")) setKeyframe(c, "x", local, x0 + dx);
+          else c.transform.x = orig.x + dx;
+          if (animated("y")) setKeyframe(c, "y", local, y0 + dy);
+          else c.transform.y = orig.y + dy;
         } else if (mode === "sx" || mode === "sy") {
           // stretch along the clip's own (rotated) axis
           const r = (-bounds.rotation * Math.PI) / 180;
@@ -195,6 +212,7 @@ export function Preview() {
                 transform: `rotate(${b.rotation}deg)`,
               }}
             >
+              {anc && <div className="anchor-dot" title="Anchor point" style={{ left: `${(b.sx < 0 ? 1 - anc.x : anc.x) * 100}%`, top: `${(b.sy < 0 ? 1 - anc.y : anc.y) * 100}%` }} />}
               <div className="h tl" onPointerDown={(e) => onPointerDown(e, "scale")} />
               <div className="h br" onPointerDown={(e) => onPointerDown(e, "scale")} />
               <div className="h rot" onPointerDown={(e) => onPointerDown(e, "rotate")} />

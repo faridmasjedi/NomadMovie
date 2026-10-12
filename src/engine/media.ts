@@ -1,6 +1,7 @@
 import type { MediaItem } from "../types";
 import { uid } from "../factory";
 import { audioEngine } from "./audio";
+import { loadLottie } from "./lottie";
 
 /** ------------ element caches used by the renderer ------------ */
 const videos = new Map<string, HTMLVideoElement>(); // key: clipId
@@ -73,7 +74,7 @@ const EXT: Record<MediaItem["kind"], RegExp> = {
 };
 
 export const ACCEPTED_FORMATS_HINT =
-  "Video: MP4, MOV, MKV, AVI, WMV, FLV, MPEG, MTS/M2TS, WebM, 3GP, MXF, ProRes, HEVC… · Audio: MP3, WAV, FLAC, AAC, M4A, OGG, WMA, AIFF, AC3, OPUS… · Photos: JPG, PNG, HEIC, RAW (CR2/NEF/ARW/DNG…), PSD, TIFF, WebP, GIF, SVG…";
+  "Video: MP4, MOV, MKV, AVI, WMV, FLV, MPEG, MTS/M2TS, WebM, 3GP, MXF, ProRes, HEVC… · Audio: MP3, WAV, FLAC, AAC, M4A, OGG, WMA, AIFF, AC3, OPUS… · Photos: JPG, PNG, HEIC, RAW (CR2/NEF/ARW/DNG…), PSD, TIFF, WebP, GIF, SVG… · Animations: Lottie (.json)";
 
 const kindOf = (type: string, name: string): MediaItem["kind"] | null => {
   for (const k of ["video", "audio", "image"] as const) if (EXT[k].test(name)) return k;
@@ -115,6 +116,8 @@ class NeedsEngine extends Error {}
 
 export async function importFile(file: Blob & { name?: string }, id = uid("med"), knownName?: string, onProgress?: ImportProgress): Promise<MediaItem | null> {
   const name = knownName ?? (file as File).name ?? "media";
+  // Lottie animation (.json exported from After Effects / LottieFiles)
+  if (/\.json$/i.test(name) || file.type === "application/json") return loadLottie(file, id, name);
   let kind = kindOf(file.type, name);
   let src: Blob = file, srcName = name, expectAudio: boolean | undefined;
   const state: { converted: "" | "remux" | "forced" } = { converted: "" };

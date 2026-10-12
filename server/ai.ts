@@ -88,6 +88,10 @@ auto_duck {clipId} — lower this (music) clip's volume while other clips have s
 normalize {clipId} — loudness normalization
 beats_to_markers {clipId} — detect music beats and add markers (then you can't see them; tell the user to look at the timeline)
 detect_scenes {clipId, split?} — find scene cuts in a video clip (optionally split there)
+add_motion {clipId, type, speed?, amount? (0-100), delay? (s)} — a motion preset that loops by itself for the whole clip (catalog.motionPresets: float, sway, wiggle, bounce, pulse, heartbeat, spin, swing, jelly, orbit, shake, blink, drift). Great for quick character / sticker / logo animation without keyframes.  /  clear_motion {clipId}
+set_anchor {clipId, x, y} — the point (0..1 of the clip's picture; 0,0 = top-left) it rotates and scales around, e.g. a shoulder for an arm, the stem base for a plant. Set it before sway / swing / spin. Illustration parts fill the whole artboard: their "drawnArea" [left, top, right, bottom] (0..1) shows where the part really is — place anchors relative to it (e.g. an arm reaching right: x = left, y = middle of drawnArea).
+set_parent {clipId, parentId|null} — the clip follows the parent's position, rotation and scale (e.g. hand → arm → body). The clip doesn't move when attached.
+split_layers {clipId} — split an SVG illustration (clips with illustration:true, or imported .svg) into one clip per part so parts can be animated separately; the new clips get the part names and are parented to the bottom layer. Afterwards, reference the new clips by name in a later request.
 
 ## Motion design guidance
 - When asked to "make an animation / intro / title / lower third / logo reveal", design a polished, layered composition: background (solid or gradient shape), decorative shapes, main text, and timed keyframes with eased motion (overshoot with backOut, staggered starts of ~0.1–0.25s, holds, exits). Typical intro is 4–8 seconds.
