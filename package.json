@@ -36,6 +36,7 @@
     "electron-builder": "^25.1.8",
     "esbuild": "^0.28.2",
     "gl-transitions": "^1.74.0",
+    "lottie-web": "^5.13.0",
     "mp4-muxer": "^5.1.5",
     "mp4box": "^0.5.3",
     "react": "^18.3.1",

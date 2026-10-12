@@ -14,6 +14,8 @@ export interface MediaItem {
   peaks?: Float32Array;
   peaksPerSec?: number;
   blob?: Blob;
+  /** a Lottie animation (played frame by frame); duration is one loop */
+  lottie?: { fr: number; frames: number };
 }
 
 /** "adjustment" = effect layer: applies its filters/effects to everything below it */
@@ -130,6 +132,17 @@ export interface ChromaKey {
   smoothness: number; // 0..100
 }
 
+/** a ready-made motion that runs on its own — no keyframes needed */
+export interface Behavior {
+  type: string; // id from BEHAVIORS
+  /** cycles per second (or turns per second for spin) */
+  speed: number;
+  /** 0..100 */
+  amount: number;
+  /** start offset in seconds, so copies of a clip don't move in sync */
+  delay?: number;
+}
+
 /** a mask shape at one moment of an animated mask */
 export interface MaskKey {
   /** seconds, relative to clip start */
@@ -184,6 +197,12 @@ export interface Clip {
   crop: { top: number; right: number; bottom: number; left: number }; // percent
   fit: "contain" | "cover" | "stretch";
   mask?: Mask;
+  /** motion presets (float, sway, wiggle…) layered on top of the transform */
+  behaviors?: Behavior[];
+  /** the point the clip rotates and scales around, 0..1 of its picture (default: center) */
+  anchor?: { x: number; y: number };
+  /** follows another clip's position, rotation and scale (its own transform is relative to it) */
+  parentId?: string;
   /** a static SVG image created by the AI, stored as markup */
   svg?: string;
 }

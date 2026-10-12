@@ -59,7 +59,8 @@ export function makeClip(project: Project, kind: ClipKind, trackId: string, star
 
 export function clipFromMedia(project: Project, media: MediaItem, trackId: string, start: number): Clip {
   const kind: ClipKind = media.kind;
-  const duration = media.kind === "image" ? 5 : media.duration;
+  // photos get 5 s; Lottie animations play once through (they loop if the clip is made longer)
+  const duration = media.kind === "image" && !media.lottie ? 5 : media.duration;
   return makeClip(project, kind, trackId, start, duration, { mediaId: media.id, name: media.name });
 }
 

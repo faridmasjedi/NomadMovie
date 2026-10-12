@@ -7,6 +7,10 @@ import { TRANSITION_DEFS } from "../engine/transitionsLib";
 import { GL_EFFECTS } from "../engine/effectsLib";
 import type { AnimProp, Clip, EffectType, Keyframe, ShapeType } from "../types";
 import { autoDuck, beatsToMarkers, normalizeClip, removeSilence, scenesForClip } from "./smart";
+import { BEHAVIORS, behaviorDef, newBehavior } from "../engine/behaviors";
+import { setAnchor, setParent } from "../engine/rig";
+import { partBox, splitIntoLayers } from "../engine/svgLayers";
+import { getSvgImage } from "../engine/media";
 import { applyToClips, usePresets } from "../engine/userPresets";
 
 export interface AIAction {
@@ -15,6 +19,12 @@ export interface AIAction {
 }
 
 const S = () => useStore.getState();
+
+/** waits for illustration layers to load, so their drawn areas can be measured for the context */
+export async function prepareContext() {
+  const svgs = S().project.clips.flatMap((c) => (c.svg ? [c.svg] : []));
+  await Promise.all(svgs.map((svg) => getSvgImage(svg).decode().catch(() => {})));
+}
 
 /** compact description of the project sent to the model */
 export function buildContext() {
@@ -46,6 +56,10 @@ export function buildContext() {
         opacity: c.transform.opacity,
         ...(Object.keys(c.keyframes).length ? { keyframedProps: Object.keys(c.keyframes) } : {}),
         ...(c.effects.length ? { effects: c.effects.map((e) => e.type) } : {}),
+        ...(c.behaviors?.length ? { motionPresets: c.behaviors.map((b) => b.type) } : {}),
+        ...(c.parentId ? { parentId: c.parentId } : {}),
+        ...(c.anchor ? { anchor: c.anchor } : {}),
+        ...(c.svg ? { illustration: true, drawnArea: partBox(c.svg) ?? undefined } : {}),
         ...(c.kind === "audio" || c.kind === "video" ? { volume: c.audio.volume } : {}),
       })),
     media: Object.values(media).map((m) => ({ id: m.id, name: m.name, kind: m.kind, duration: r(m.duration), width: m.width, height: m.height })),
@@ -59,6 +73,7 @@ export function buildContext() {
       transitions: TRANSITION_DEFS.map((t) => `${t.id} (${t.category})`),
       animPresets: ANIM_PRESETS.map((a) => a[0]),
       fonts: FONTS,
+      motionPresets: BEHAVIORS.map((b) => `${b.id} (${b.hint})`),
       myPresets: usePresets.getState().presets.map((x) => x.name),
     },
   };
@@ -329,6 +344,34 @@ export async function runActions(actions: AIAction[]): Promise<string[]> {
           break;
         case "beats_to_markers":
           log.push(`${beatsToMarkers(clip(a.clipId).id)} beats found`);
+          break;
+        case "add_motion": {
+          const c = clip(a.clipId);
+          const type = bare(a.type);
+          if (!behaviorDef(type)) throw new Error(`unknown motion preset ${a.type}`);
+          S().updateClip(c.id, (x) => {
+            const b = { ...newBehavior(type), ...(typeof a.speed === "number" ? { speed: a.speed } : {}), ...(typeof a.amount === "number" ? { amount: a.amount } : {}), ...(typeof a.delay === "number" ? { delay: a.delay } : {}) };
+            x.behaviors = [...(x.behaviors ?? []).filter((y) => y.type !== type), b];
+          });
+          break;
+        }
+        case "clear_motion":
+          S().updateClip(clip(a.clipId).id, (x) => void delete x.behaviors);
+          break;
+        case "set_anchor": {
+          const c = clip(a.clipId);
+          const m = c.mediaId ? S().media[c.mediaId] : undefined;
+          S().updateClip(c.id, (x, pp) => setAnchor(x, Math.min(1, Math.max(0, num(a.x, 0.5))), Math.min(1, Math.max(0, num(a.y, 0.5))), pp, m, S().currentTime - x.start));
+          break;
+        }
+        case "set_parent": {
+          const c = clip(a.clipId);
+          const parent = a.parentId ? clip(a.parentId).id : null;
+          S().updateClip(c.id, (x, pp) => void setParent(x, parent, pp, S().currentTime));
+          break;
+        }
+        case "split_layers":
+          log.push(`split into ${await splitIntoLayers(clip(a.clipId).id)} layers`);
           break;
         case "detect_scenes":
           log.push(`${await scenesForClip(clip(a.clipId).id, !!a.split)} scene cuts found`);

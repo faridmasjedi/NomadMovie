@@ -36,6 +36,13 @@ Set up a clip the way you like (color, effects, animation, size and position, cr
 ### Motion graphics
 Text with style presets and 7 bundled fonts · shapes and gradients · keyframes for position, scale, rotation, opacity and blur with 8 easing curves · 14 in/out animation presets (typewriter, word by word, pop…) · zoom and pan moves · freeze frames · photo slideshows.
 
+### Easy animation
+- **Motion presets:** one click to make anything float, sway, wiggle, bounce, pulse, spin, swing like a pendulum, orbit, shake, blink or drift, with no keyframes. Combine them and adjust speed and strength.
+- **Animate the parts of an illustration:** import an SVG and click **Split into layers** to put each part (head, arm, wing…) on its own track, ready to animate.
+- **Anchor points and parenting:** choose what a part turns around (a shoulder, a stem), and make parts follow each other (hand → arm → body), like in After Effects.
+- **Lottie animations:** drop in `.json` animations exported from After Effects or downloaded from [LottieFiles](https://lottiefiles.com). They play and loop on the timeline.
+- The AI assistant can do all of this for you: *"split the character into layers and make the arm wave"*.
+
 ### Effects and color
 90 GPU effects (deep glow, anamorphic flares, film emulation, glitch, VHS, light leaks, weather…) · outlines, drop shadows and neon glows for cut-outs · 155 transitions · effect layers that apply to everything below them · 16 color looks plus manual grading · chroma key · blend modes.
 

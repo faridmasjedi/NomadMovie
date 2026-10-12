@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { useStore } from "../store";
-import { buildContext, runActions } from "../ai/actions";
+import { buildContext, prepareContext, runActions } from "../ai/actions";
 import { addCaptions, captionsToSrt, clipWav, removeSilence } from "../ai/smart";
 import { soundSegments } from "../engine/analysis";
 import { canvasToJpeg } from "../engine/media";
@@ -51,6 +51,7 @@ export function AIPanel() {
     setLoading(true);
     try {
       const image = withFrame && previewCanvas ? canvasToJpeg(previewCanvas, 1024) : undefined;
+      await prepareContext();
       const res = await fetch("/api/ai/assist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

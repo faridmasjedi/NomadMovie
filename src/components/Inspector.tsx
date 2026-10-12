@@ -15,6 +15,10 @@ import { defaultFilters, fmtTime } from "../factory";
 import { addMaskKey, keyAt, removeMaskKey } from "../engine/mask";
 import { cropToMask, stopTracking, trackMask } from "../ai/maskTools";
 import type { MaskTool } from "../store";
+import { BEHAVIORS, behaviorDef, newBehavior } from "../engine/behaviors";
+import { setAnchor, setParent, makesLoop } from "../engine/rig";
+import { canSplit, splitIntoLayers } from "../engine/svgLayers";
+import { lastBounds } from "../engine/render";
 import { PresetBar } from "./PresetBar";
 
 type Tab = "basic" | "anim" | "color" | "fx" | "audio" | "speed";
@@ -23,6 +27,7 @@ export function Inspector() {
   const selected = useStore((s) => s.selected);
   const clip = useStore((s) => (s.selected.length === 1 ? s.project.clips.find((c) => c.id === s.selected[0]) : undefined));
   const [tab, setTab] = useState<Tab>("basic");
+  const media = useStore((s) => s.media);
   const focus = useStore((s) => s.focus);
   // jump to whatever was clicked on the timeline (an effect chip, a transition…)
   useEffect(() => {
@@ -39,7 +44,7 @@ export function Inspector() {
     ["color", "Color", visual && clip.kind !== "text" && clip.kind !== "shape"],
     ["fx", "Effects", visual],
     ["audio", "Audio", sound],
-    ["speed", "Speed", clip.kind === "video" || clip.kind === "audio"],
+    ["speed", "Speed", clip.kind === "video" || clip.kind === "audio" || !!(clip.mediaId && media[clip.mediaId]?.lottie)],
   ];
   const active = tabs.find((t) => t[0] === tab && t[2]) ? tab : "basic";
 
@@ -132,6 +137,7 @@ function BasicTab({ c }: { c: Clip }) {
           <AnimSlider c={c} prop="scale" label="Scale" min={0.01} max={5} step={0.01} base={c.transform.scale} setBase={(x, v) => (x.transform.scale = v)} />
           <AnimSlider c={c} prop="rotation" label="Rotation" min={-360} max={360} base={c.transform.rotation} setBase={(x, v) => (x.transform.rotation = v)} unit="°" />
           {c.kind !== "adjustment" && <SizeFields c={c} />}
+          {c.kind !== "adjustment" && <RigFields c={c} />}
           <AnimSlider c={c} prop="opacity" label="Opacity" min={0} max={1} step={0.01} base={c.transform.opacity} setBase={(x, v) => (x.transform.opacity = v)} />
           <div className="row" style={{ gap: 6 }}>
             <button onClick={() => upd(c, "flipH", (x) => void (x.transform.flipH = !x.transform.flipH))}>↔ Flip H</button>
@@ -152,6 +158,8 @@ function BasicTab({ c }: { c: Clip }) {
           </Field>
         </Section>
       )}
+
+      <IllustrationSection c={c} />
 
       {(c.kind === "video" || c.kind === "image") && !c.svg && (
         <Section title="Crop" defaultOpen={false}>
@@ -266,6 +274,77 @@ function MaskSection({ c }: { c: Clip }) {
           )}
         </>
       )}
+    </Section>
+  );
+}
+
+/** anchor point (what it rotates and scales around) and parent (what it follows) */
+function RigFields({ c }: { c: Clip }) {
+  const p = useStore((s) => s.project);
+  const media = useStore((s) => s.media);
+  const t = useStore((s) => s.currentTime);
+  const pick = useStore((s) => s.pick);
+  const ax = c.anchor?.x ?? 0.5, ay = c.anchor?.y ?? 0.5;
+  const local = t - c.start;
+  const m = c.mediaId ? media[c.mediaId] : undefined;
+  const anchor = (x: number, y: number) => useStore.getState().updateClip(c.id, (cl, pp) => setAnchor(cl, x, y, pp, m, local));
+  const pickAnchor = () =>
+    useStore.getState().set({
+      pick: {
+        label: "Click the point it should turn around (a shoulder, a stem, a hinge…)",
+        cb: (px, py) => {
+          const b = lastBounds.get(c.id);
+          if (!b) return;
+          // frame point → 0..1 of the clip's picture
+          const r = (-b.rotation * Math.PI) / 180, dx = px - b.x, dy = py - b.y;
+          const lx = (dx * Math.cos(r) - dy * Math.sin(r)) / b.sx, ly = (dx * Math.sin(r) + dy * Math.cos(r)) / b.sy;
+          anchor(Math.min(1, Math.max(0, lx / b.w + 0.5)), Math.min(1, Math.max(0, ly / b.h + 0.5)));
+        },
+      },
+    });
+  const others = p.clips.filter((x) => x.id !== c.id && x.kind !== "audio" && !makesLoop(p, c.id, x.id));
+  return (
+    <>
+      <Field label="Anchor point">
+        <div className="anchor-grid" title="What it rotates and scales around">
+          {[0, 0.5, 1].flatMap((y) => [0, 0.5, 1].map((x) => (
+            <button key={`${x}${y}`} className={Math.abs(ax - x) < 0.01 && Math.abs(ay - y) < 0.01 ? "on" : ""} onClick={() => anchor(x, y)} />
+          )))}
+        </div>
+        <button className={pick ? "active" : ""} onClick={pickAnchor}>🎯 Pick</button>
+      </Field>
+      <Field label="Parent">
+        <select value={c.parentId ?? ""} title="Follow another clip's position, rotation and size"
+          onChange={(e) => useStore.getState().updateClip(c.id, (cl, pp) => void setParent(cl, e.target.value || null, pp, t))}>
+          <option value="">None</option>
+          {others.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
+      </Field>
+      {c.parentId && <div className="hint">Follows “{p.clips.find((x) => x.id === c.parentId)?.name}”: its position, rotation and size are relative to it.</div>}
+    </>
+  );
+}
+
+/** SVG illustrations: split into one layer per part, to animate the parts */
+function IllustrationSection({ c }: { c: Clip }) {
+  const m = useStore((s) => (c.mediaId ? s.media[c.mediaId] : undefined));
+  const [busy, setBusy] = useState(false);
+  if (!canSplit(c, m)) return null;
+  const split = async () => {
+    setBusy(true);
+    try {
+      const n = await splitIntoLayers(c.id);
+      useStore.getState().notify(`Split into ${n} layers — click a part on the preview to animate it`, "ok");
+    } catch (e) {
+      useStore.getState().notify(e instanceof Error ? e.message : String(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Section title="Animate the parts">
+      <div className="hint">Split this illustration into its parts (head, arm, wing…), each on its own track. Then give a part a motion preset or keyframes, set its anchor point (e.g. the shoulder) and parent it (e.g. hand → arm).</div>
+      <button className="primary" disabled={busy} onClick={split}>✂ Split into layers</button>
     </Section>
   );
 }
@@ -391,6 +470,7 @@ function AnimTab({ c }: { c: Clip }) {
       </Section>
       <TransitionSection c={c} side="transitionIn" />
       <TransitionSection c={c} side="transitionOut" />
+      <BehaviorSection c={c} />
       <MotionSection c={c} />
       <Section title="Keyframes">
         <div className="hint">Move the playhead and click ◆ next to a property, or drag directly in the preview (once a property has keyframes, dragging creates keyframes).</div>
@@ -569,6 +649,49 @@ function TransitionSection({ c, side }: { c: Clip; side: "transitionIn" | "trans
   );
 }
 
+/** ready-made motions that run on their own: float, sway, wiggle… */
+function BehaviorSection({ c }: { c: Clip }) {
+  const list = c.behaviors ?? [];
+  const set = (fn: (b: NonNullable<Clip["behaviors"]>) => void, key: string) =>
+    upd(c, `beh-${key}`, (x) => {
+      const b = (x.behaviors ??= []);
+      fn(b);
+      if (!b.length) delete x.behaviors;
+    });
+  return (
+    <Section title="Motion presets" fid="behaviors">
+      <div className="hint">One click to make it move by itself, for as long as the clip lasts. Combine them freely. Tip: set the anchor point (Basic tab) to choose what it turns around.</div>
+      <div className="chips" style={{ margin: "6px 0" }}>
+        {BEHAVIORS.map((d) => (
+          <span key={d.id} className={`chip ${list.some((b) => b.type === d.id) ? "on" : ""}`} title={d.hint}
+            onClick={() => set((b) => { const i = b.findIndex((x) => x.type === d.id); if (i >= 0) b.splice(i, 1); else b.push(newBehavior(d.id)); }, `t${d.id}${Date.now()}`)}>
+            {d.label}
+          </span>
+        ))}
+      </div>
+      {list.map((b, i) => {
+        const d = behaviorDef(b.type);
+        if (!d) return null;
+        return (
+          <div key={b.type} className="behavior-card">
+            <div className="row" style={{ alignItems: "center" }}>
+              <b style={{ fontSize: 12 }}>{d.label}</b>
+              <span className="spacer" />
+              <button className="ghost icon" title="Remove" onClick={() => set((x) => void x.splice(i, 1), `rm${Date.now()}`)}>×</button>
+            </div>
+            <Slider label={b.type === "spin" ? "Turns / s" : "Speed"} min={0.01} max={b.type === "shake" ? 30 : 4} step={0.01} value={b.speed}
+              onChange={(v) => set((x) => void (x[i].speed = v), `s${b.type}`)} onReset={() => set((x) => void (x[i].speed = d.speed), `s${b.type}`)} />
+            <Slider label="Amount" min={b.type === "drift" || b.type === "spin" ? -100 : 0} max={100} value={b.amount}
+              onChange={(v) => set((x) => void (x[i].amount = v), `a${b.type}`)} onReset={() => set((x) => void (x[i].amount = d.amount), `a${b.type}`)} />
+            <Slider label="Offset" min={0} max={5} step={0.05} unit="s" value={b.delay ?? 0}
+              onChange={(v) => set((x) => void (x[i].delay = v), `d${b.type}`)} />
+          </div>
+        );
+      })}
+    </Section>
+  );
+}
+
 function MotionSection({ c }: { c: Clip }) {
   const p = useStore((s) => s.project);
   const t = useStore((s) => s.currentTime);
@@ -678,7 +801,8 @@ function SpeedTab({ c }: { c: Clip }) {
   const m = useStore((st) => (c.mediaId ? st.media[c.mediaId] : undefined));
   const setSpeed = (sp: number) =>
     upd(c, "speed", (x) => {
-      const maxDur = m ? (m.duration - x.offset) / sp : Infinity;
+      // Lottie animations loop, so they can be as long as you like
+      const maxDur = m && !m.lottie ? (m.duration - x.offset) / sp : Infinity;
       x.duration = Math.min(maxDur, (x.duration * x.speed) / sp);
       x.speed = sp;
     });
