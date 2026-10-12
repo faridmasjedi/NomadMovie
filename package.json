@@ -94,6 +94,9 @@
       "target": [
         {
           "target": "nsis"
+        },
+        {
+          "target": "zip"
         }
       ],
       "icon": "build/icon.png"
@@ -106,7 +109,8 @@
     "linux": {
       "target": [
         "AppImage",
-        "deb"
+        "deb",
+        "zip"
       ],
       "category": "AudioVideo;Video;AudioVideoEditing",
       "icon": "build/icon.png",

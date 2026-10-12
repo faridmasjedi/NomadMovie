@@ -3,7 +3,8 @@ name: Release
 # Publish a new version in either of two ways:
 #   • Actions tab → "Release" → Run workflow → enter a version such as 1.2.0
 #   • or push a tag:  git tag v1.2.0 && git push origin v1.2.0
-# Builds macOS (Apple Silicon + Intel), Windows and Linux, then creates a GitHub Release with the installers.
+# Builds macOS (Apple Silicon + Intel), Windows and Linux (see build-app.yml), then creates a GitHub Release
+# with the installers and plain zips.
 
 on:
   push:
@@ -59,73 +60,13 @@ jobs:
           git push origin "$TAG"
 
   build:
-    name: Build ${{ matrix.name }}
+    name: Build
     needs: prepare
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macOS (Apple Silicon)
-            os: macos-latest
-            args: --mac --arm64
-          - name: macOS (Intel)
-            os: macos-latest
-            args: --mac --x64
-            ffmpeg_arch: x64
-          - name: Windows
-            os: windows-latest
-            args: --win --x64
-          - name: Linux
-            os: ubuntu-latest
-            args: --linux --x64
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.prepare.outputs.tag }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Bundle ffmpeg for Intel Macs
-        if: matrix.ffmpeg_arch
-        shell: bash
-        run: |
-          rm -f node_modules/ffmpeg-static/ffmpeg
-          npm_config_arch=${{ matrix.ffmpeg_arch }} npm rebuild ffmpeg-static
-          file node_modules/ffmpeg-static/ffmpeg
-      - name: Set version ${{ needs.prepare.outputs.version }}
-        run: npm version ${{ needs.prepare.outputs.version }} --no-git-tag-version --allow-same-version
-      - run: npm run build
-      - run: npm run build:electron
-      - name: Package
-        shell: bash
-        env:
-          # optional signing — add these repository secrets to sign (and notarize) the installers
-          CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || secrets.MAC_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          # without a certificate the build is unsigned (macOS builds get an ad-hoc signature, see build/adhoc-sign.cjs)
-          if [ -z "$CSC_LINK" ]; then
-            unset CSC_LINK CSC_KEY_PASSWORD
-            export CSC_IDENTITY_AUTO_DISCOVERY=false
-          fi
-          if [ -z "$APPLE_ID" ]; then unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
-          npx electron-builder ${{ matrix.args }} --publish never
-      - uses: actions/upload-artifact@v4
-        with:
-          name: installers-${{ strategy.job-index }}
-          if-no-files-found: error
-          path: |
-            release/*.dmg
-            release/*.zip
-            release/*.exe
-            release/*.AppImage
-            release/*.deb
+    uses: ./.github/workflows/build-app.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit
 
   publish:
     name: Publish GitHub Release
@@ -134,6 +75,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: NomadMovie-*
           path: installers
           merge-multiple: true
       - run: ls -la installers
@@ -147,12 +89,12 @@ jobs:
           body: |
             ## Download
 
-            | System | File |
-            | --- | --- |
-            | macOS, Apple Silicon (M1–M4) | `NomadMovie-${{ needs.prepare.outputs.version }}-mac-arm64.dmg` |
-            | macOS, Intel | `NomadMovie-${{ needs.prepare.outputs.version }}-mac-x64.dmg` |
-            | Windows 10/11 | `NomadMovie-${{ needs.prepare.outputs.version }}-windows-setup.exe` |
-            | Linux | `.AppImage` (any distro) or `.deb` (Ubuntu/Debian) |
+            | System | Installer | Or just unzip and run |
+            | --- | --- | --- |
+            | macOS, Apple Silicon (M1 and later) | `NomadMovie-${{ needs.prepare.outputs.version }}-mac-arm64.dmg` | `…-mac-arm64.zip` |
+            | macOS, Intel | `NomadMovie-${{ needs.prepare.outputs.version }}-mac-x64.dmg` | `…-mac-x64.zip` |
+            | Windows 10/11 | `NomadMovie-${{ needs.prepare.outputs.version }}-windows-setup.exe` | `…-win-x64.zip` |
+            | Linux | `.AppImage` (any distro) or `.deb` (Ubuntu/Debian) | `…-linux-x64.zip` |
 
             **First launch on macOS:** if macOS says it can't check the app for malicious software, right-click NomadMovie in Applications → **Open** → **Open**. (Only needed once, and only for builds that aren't notarized by Apple.)
             **Windows:** if SmartScreen appears, click **More info → Run anyway**.
