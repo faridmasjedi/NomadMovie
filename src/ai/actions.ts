@@ -11,6 +11,7 @@ import { BEHAVIORS, behaviorDef, newBehavior } from "../engine/behaviors";
 import { setAnchor, setParent } from "../engine/rig";
 import { partBox, splitIntoLayers } from "../engine/svgLayers";
 import { getSvgImage } from "../engine/media";
+import { applyToClips, usePresets } from "../engine/userPresets";
 
 export interface AIAction {
   op: string;
@@ -73,6 +74,7 @@ export function buildContext() {
       animPresets: ANIM_PRESETS.map((a) => a[0]),
       fonts: FONTS,
       motionPresets: BEHAVIORS.map((b) => `${b.id} (${b.hint})`),
+      myPresets: usePresets.getState().presets.map((x) => x.name),
     },
   };
 }
@@ -374,6 +376,14 @@ export async function runActions(actions: AIAction[]): Promise<string[]> {
         case "detect_scenes":
           log.push(`${await scenesForClip(clip(a.clipId).id, !!a.split)} scene cuts found`);
           break;
+        case "apply_preset": {
+          const want = String(a.preset ?? "").toLowerCase();
+          const preset = usePresets.getState().presets.find((x) => x.name.toLowerCase() === want);
+          if (!preset) throw new Error(`no preset called "${a.preset}"`);
+          const ids = (Array.isArray(a.clipIds) ? a.clipIds : [a.clipId]).map((x: string) => clip(x).id);
+          log.push(`“${preset.name}” applied to ${applyToClips(preset, ids)} clip(s)`);
+          break;
+        }
         default:
           log.push(`unknown operation: ${op}`);
       }

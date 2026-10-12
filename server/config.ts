@@ -40,7 +40,7 @@ export interface Config {
 }
 
 /** resolved lazily so the desktop app can point it at its userData folder before first use */
-const dataDir = () => process.env.NOMAD_DATA_DIR ?? path.join(os.homedir(), ".nomadmovie");
+export const dataDir = () => process.env.NOMAD_DATA_DIR ?? path.join(os.homedir(), ".nomadmovie");
 const configFile = () => path.join(dataDir(), "config.json");
 /** settings saved under the app's earlier names (read once if there are no settings yet) */
 const legacyConfigFiles = () => [path.join(os.homedir(), ".farid-editor", "config.json"), path.join(os.homedir(), ".nova-editor", "config.json")];
