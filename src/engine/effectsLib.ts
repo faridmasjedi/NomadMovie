@@ -1,6 +1,8 @@
 // GPU effect library. Each shader defines `vec4 effect(vec2 uv)`; uniforms: amount (0..1), time (s),
 // p1..p3 (effect parameters), color1/color2, resolution. See EFFECT_HEADER in gl.ts for helpers.
 
+import { EXTRA_EFFECTS } from "./effectsExtra";
+
 export interface EffectParam {
   key: "p1" | "p2" | "p3";
   label: string;
@@ -24,7 +26,7 @@ export const EFFECT_CATEGORIES = ["Blur", "Distortion", "Glitch", "Retro", "Ligh
 
 const keepAlpha = (expr: string) => `vec4 effect(vec2 uv){ vec4 c = src(uv); ${expr} }`;
 
-export const GL_EFFECTS: EffectDef[] = [
+const BASE_EFFECTS: EffectDef[] = [
   /* ------------------------------ Blur ------------------------------ */
   {
     id: "gaussianBlur", label: "Gaussian Blur", category: "Blur", amount: 40,
@@ -408,6 +410,9 @@ export const GL_EFFECTS: EffectDef[] = [
     glsl: `vec4 effect(vec2 uv){ float z = 1.0 + amount * 0.12 * (0.5 + 0.5 * sin(time * p1 * 3.1415)); return src(0.5 + (uv - 0.5) / z); }`,
   },
 ];
+
+/** every GPU effect: the original set first, then the newer additions */
+export const GL_EFFECTS: EffectDef[] = [...BASE_EFFECTS, ...EXTRA_EFFECTS];
 
 export const effectDef = (id: string) => GL_EFFECTS.find((e) => e.id === id);
 
