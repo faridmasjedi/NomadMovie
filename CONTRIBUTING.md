@@ -36,6 +36,10 @@ The CI checks run automatically on your pull request. The maintainer reviews it 
 - Rendering code must give identical results in the preview and the exported video — export uses the same `renderFrame`.
 - New AI features should work with every provider (see `server/ai.ts`), or degrade gracefully when no AI is connected.
 
+## For maintainers
+
+Building test versions and publishing releases is described in [RELEASING.md](RELEASING.md).
+
 ## Project layout
 
 See ["How it's built"](README.md#how-its-built) in the README.

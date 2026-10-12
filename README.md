@@ -73,6 +73,7 @@ Download the installer for your system from the **[latest release](https://githu
 - **macOS:** open the `.dmg` and drag NomadMovie into Applications. Use the `arm64` file for Apple Silicon (M1 and later) and `x64` for Intel Macs. If macOS says it can't check the app, right-click it in Applications and choose **Open**. You only need to do this once.
 - **Windows:** run the `setup.exe`. If SmartScreen appears, click **More info → Run anyway**.
 - **Linux:** use the `.AppImage` (make it executable and run it) or install the `.deb`.
+- **No installer?** Every release also has a plain `.zip` for each system: unzip it and run NomadMovie directly.
 
 ## Build from source
 
@@ -89,17 +90,6 @@ npm run dist       # build an installer for your system into release/
 ```
 
 Optional: automatic speech-to-text for subtitles needs [Whisper](https://github.com/openai/whisper) (`pip install openai-whisper`). Without it, paste a script and the AI times it to the speech.
-
-## Releasing a new version
-
-*(for maintainers)*
-
-1. Go to **Actions → Release → Run workflow** and enter the new version, for example `1.2.0`.
-   Or push a tag: `git tag v1.2.0 && git push origin v1.2.0`.
-2. The workflow builds macOS (Apple Silicon and Intel), Windows and Linux, and publishes a GitHub Release with the installers and release notes.
-
-Builds are unsigned until signing secrets are added. To sign and notarize, add these repository secrets:
-`MAC_CSC_LINK` and `MAC_CSC_KEY_PASSWORD` (your Developer ID certificate as a base64 .p12), `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`, and for Windows `WIN_CSC_LINK` and `WIN_CSC_KEY_PASSWORD`.
 
 ## Contributing
 

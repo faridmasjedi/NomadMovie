@@ -1,0 +1,114 @@
+name: Build app
+
+# Builds NomadMovie for macOS (Apple Silicon + Intel), Windows and Linux.
+#   • Run it by hand (Actions → Build app → Run workflow) to get test builds as downloadable zips,
+#     without publishing a release. Files are kept for 30 days and need a GitHub login to download.
+#   • It also runs on pull requests that change packaging, so a broken build is caught before merging.
+#   • The Release workflow uses it to build the installers it publishes.
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/build-app.yml"
+      - ".github/workflows/release.yml"
+      - "build/**"
+      - "electron/**"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to stamp on the build (leave empty for <package version>-build.<run number>)"
+        required: false
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (Apple Silicon)
+            slug: mac-arm64
+            os: macos-latest
+            args: --mac --arm64
+          - name: macOS (Intel)
+            slug: mac-x64
+            os: macos-latest
+            args: --mac --x64
+            ffmpeg_arch: x64
+          - name: Windows
+            slug: windows-x64
+            os: windows-latest
+            args: --win --x64
+          - name: Linux
+            slug: linux-x64
+            os: ubuntu-latest
+            args: --linux --x64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Bundle ffmpeg for Intel Macs
+        if: matrix.ffmpeg_arch
+        shell: bash
+        run: |
+          rm -f node_modules/ffmpeg-static/ffmpeg
+          npm_config_arch=${{ matrix.ffmpeg_arch }} npm rebuild ffmpeg-static
+          file node_modules/ffmpeg-static/ffmpeg
+      - name: Set the version
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          v="${VERSION#v}"
+          if [ -z "$v" ]; then v="$(node -p 'require("./package.json").version')-build.${GITHUB_RUN_NUMBER}"; fi
+          echo "Building version $v"
+          npm version "$v" --no-git-tag-version --allow-same-version
+      - run: npm run build
+      - run: npm run build:electron
+      - name: Package
+        shell: bash
+        env:
+          # optional signing — add these repository secrets to sign (and notarize) the builds
+          CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # without a certificate the build is unsigned (macOS builds get an ad-hoc signature, see build/adhoc-sign.cjs)
+          if [ -z "$CSC_LINK" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          if [ -z "$APPLE_ID" ]; then unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
+          npx electron-builder ${{ matrix.args }} --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NomadMovie-${{ matrix.slug }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
