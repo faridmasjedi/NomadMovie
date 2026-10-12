@@ -8,6 +8,7 @@ import type { AddressInfo } from "node:net";
 import { aiAssist, aiSubtitles, aiAvailable, listModels, testProvider } from "./ai.ts";
 import { claudeStatus, findClaude, getConfig, modelFor, PROVIDERS, saveConfig, urlFor, type Config, type Provider } from "./config.ts";
 import { registerImport } from "./importer.ts";
+import { cancelSetup, installClaude, setupState, startLogin, submitCode } from "./claudeSetup.ts";
 
 const has = (bin: string, arg = "-version") => {
   try {
@@ -160,6 +161,17 @@ export function createApp(opts: { staticDir?: string } = {}) {
     }
   });
 
+  // Claude subscription setup from inside the app (install Claude Code, browser sign-in)
+  app.use("/api/claude", express.json());
+  app.get("/api/claude/setup", async (_req, res) => res.json({ ...setupState(), status: await claudeStatus() }));
+  app.post("/api/claude/install", async (_req, res) => res.json(await installClaude()));
+  app.post("/api/claude/login", async (_req, res) => res.json(await startLogin()));
+  app.post("/api/claude/code", (req, res) => res.json({ ok: submitCode(String(req.body?.code ?? "")) }));
+  app.post("/api/claude/cancel", (_req, res) => {
+    cancelSetup();
+    res.json({ ok: true });
+  });
+
   app.post("/api/settings/test", async (req, res) => {
     const b = req.body as SettingsBody;
     if (!isProvider(b.provider)) return res.status(400).json({ error: "unknown provider" });
@@ -167,7 +179,7 @@ export function createApp(opts: { staticDir?: string } = {}) {
       if (b.provider === "claude-code") {
         const st = await claudeStatus();
         if (!st.found) throw new Error("Claude Code is not installed.");
-        if (!st.loggedIn) throw new Error("Claude Code is installed but not signed in. Run `claude` in a terminal and log in.");
+        if (!st.loggedIn) throw new Error("Not signed in yet — click “Sign in with Claude”.");
       }
       res.json(await testProvider(formTarget(b)));
     } catch (e) {

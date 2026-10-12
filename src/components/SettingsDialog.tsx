@@ -105,7 +105,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     setF({ key: "" });
   };
 
-  const cc = h.claudeCode;
+  const claudeReady = useClaudeSetup().status?.loggedIn;
   const stop = (e: React.KeyboardEvent) => e.stopPropagation();
 
   return (
@@ -121,7 +121,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <div className="ai-choices">
               {CHOICES.map(([id, label, pitch]) => {
                 const p = s.providers[id];
-                const ready = id === "claude-code" ? cc.found : !p.needsKey || p.hasKey || p.envKey;
+                const ready = id === "claude-code" ? !!claudeReady : !p.needsKey || p.hasKey || p.envKey;
                 return (
                   <button key={id} className={`ai-choice ${sel === id ? "on" : ""}`} onClick={() => { setSel(id); setTest({ state: "idle" }); }}>
                     <b>{label}{s.provider === id && <span className="tag">in use</span>}{s.provider !== id && ready && id !== "ollama" && id !== "custom" && <span className="tag ok">ready</span>}</b>
@@ -132,19 +132,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             </div>
 
             <div className="ai-detail">
-              {sel === "claude-code" && (
-                <div className="hint" style={{ marginBottom: 8 }}>
-                  {!cc.found ? (
-                    <span style={{ color: "var(--warn)" }}>
-                      Claude Code isn't installed. Install it with <span className="kbd">npm i -g @anthropic-ai/claude-code</span>, then run <span className="kbd">claude</span> once to sign in.
-                    </span>
-                  ) : cc.loggedIn ? (
-                    <span style={{ color: "var(--ok)" }}>✓ Claude Code is signed in{cc.account ? ` (${cc.account})` : ""}</span>
-                  ) : (
-                    <span>Claude Code found. If it isn't signed in yet, run <span className="kbd">claude</span> in a terminal and log in.</span>
-                  )}
-                </div>
-              )}
+              {sel === "claude-code" && <ClaudeSetup onReady={() => loadHealth()} />}
 
               {info.needsKey && (
                 <Field label="API key">
@@ -214,6 +202,103 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+interface ClaudeSetupState {
+  step: "idle" | "installing" | "signing-in" | "done" | "error";
+  url?: string;
+  needsCode?: boolean;
+  error?: string;
+  status?: { found: boolean; loggedIn: boolean; account?: string };
+}
+
+/** polls the Claude subscription setup (install + sign-in) while something is happening */
+function useClaudeSetup() {
+  const [st, setSt] = useState<ClaudeSetupState>({ step: "idle" });
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    let stop = false;
+    let timer = 0;
+    const poll = async () => {
+      try {
+        const j: ClaudeSetupState = await (await fetch("/api/claude/setup")).json();
+        if (stop) return;
+        setSt(j);
+        const busy = j.step === "installing" || j.step === "signing-in";
+        timer = window.setTimeout(poll, busy ? 1500 : 5000);
+      } catch {
+        timer = window.setTimeout(poll, 5000);
+      }
+    };
+    poll();
+    return () => {
+      stop = true;
+      clearTimeout(timer);
+    };
+  }, [tick]);
+  /** re-check right away (after a button press) */
+  const refresh = () => setTick((n) => n + 1);
+  return { ...st, refresh };
+}
+
+const post = (url: string, body?: object) =>
+  fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) }).then((r) => r.json());
+
+/** "Claude subscription" without a terminal: install Claude Code, then sign in through the browser */
+function ClaudeSetup({ onReady }: { onReady: () => void }) {
+  const st = useClaudeSetup();
+  const [code, setCode] = useState("");
+  const [starting, setStarting] = useState(false);
+  const found = st.status?.found, loggedIn = st.status?.loggedIn;
+  useEffect(() => {
+    if (loggedIn) onReady();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
+
+  const act = async (url: string, body?: object) => {
+    setStarting(true);
+    await post(url, body);
+    setStarting(false);
+    st.refresh();
+  };
+
+  if (loggedIn) {
+    return <div className="hint" style={{ color: "var(--ok)" }}>✓ Signed in to Claude{st.status?.account ? ` as ${st.status.account}` : ""}. You're all set.</div>;
+  }
+  if (st.step === "installing") {
+    return <div className="hint"><span className="spin inline" /> Setting up Claude Code… this takes about a minute.</div>;
+  }
+  if (st.step === "signing-in") {
+    return (
+      <div className="claude-setup">
+        <div className="hint"><span className="spin inline" /> A browser window opened. Sign in with your Claude account there, then come back here.</div>
+        {st.url && <div className="hint">Nothing opened? <a href={st.url} target="_blank" rel="noreferrer">Open the sign-in page ↗</a></div>}
+        {st.needsCode && (
+          <Field label="Code">
+            <input value={code} placeholder="If the page shows a code, paste it here" onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
+            <button disabled={!code.trim()} onClick={() => act("/api/claude/code", { code }).then(() => setCode(""))}>Continue</button>
+          </Field>
+        )}
+        <div><button className="ghost" onClick={() => act("/api/claude/cancel")}>Cancel</button></div>
+      </div>
+    );
+  }
+  return (
+    <div className="claude-setup">
+      {st.step === "error" && <div className="hint" style={{ color: "var(--warn)" }}>{st.error}</div>}
+      {!found ? (
+        <>
+          <div className="hint">NomadMovie talks to your Claude account through Claude Code, Anthropic's free helper app. One click sets it up.</div>
+          <div><button className="primary" disabled={starting} onClick={() => act("/api/claude/install")}>Set up</button></div>
+        </>
+      ) : (
+        <>
+          <div className="hint">Sign in once with your Claude Pro or Max account. Your browser opens for the sign-in.</div>
+          <div><button className="primary" disabled={starting} onClick={() => act("/api/claude/login")}>Sign in with Claude</button></div>
+        </>
+      )}
     </div>
   );
 }
