@@ -159,7 +159,7 @@ export function registerImport(app: Express, ffmpeg: string | null) {
   /** body = the file (streamed to disk); query: name, force=1 to always re-encode */
   app.post("/api/import", async (req: Request, res: Response) => {
     const name = path.basename(String(req.query.name ?? "media.bin")).slice(0, 200);
-    const job: Job = { id: randomUUID(), status: "running", progress: 0, stage: "Receiving file", dir: fs.mkdtempSync(path.join(os.tmpdir(), "farid-imp-")), createdAt: Date.now() };
+    const job: Job = { id: randomUUID(), status: "running", progress: 0, stage: "Receiving file", dir: fs.mkdtempSync(path.join(os.tmpdir(), "nomad-imp-")), createdAt: Date.now() };
     jobs.set(job.id, job);
     const input = path.join(job.dir, `input${path.extname(name).toLowerCase() || ".bin"}`);
     try {

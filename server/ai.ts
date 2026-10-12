@@ -3,21 +3,41 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { claudeEnv, findClaude, getConfig } from "./config.ts";
+import { claudeEnv, findClaude, getConfig, keyFor, modelFor, PROVIDERS, urlFor, type Provider } from "./config.ts";
+
+/** which provider / key / model a request goes to (the saved settings, or values being tested) */
+interface Target {
+  provider: Provider;
+  key: string;
+  model: string;
+  url: string;
+}
+
+const savedTarget = (): Target => {
+  const p = getConfig().provider;
+  return { provider: p, key: keyFor(p), model: modelFor(p), url: urlFor(p) };
+};
 
 let client: { key: string; c: Anthropic } | null = null;
-const getClient = () => {
-  const key = getConfig().apiKey || process.env.ANTHROPIC_API_KEY || "";
+const anthropic = (key: string) => {
   if (!client || client.key !== key) client = { key, c: new Anthropic(key ? { apiKey: key } : {}) };
   return client.c;
 };
 
-const apiKeyAvailable = () =>
-  !!(getConfig().apiKey || process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_PROFILE);
+const anthropicEnvAuth = () => !!(process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_PROFILE);
 
-export const aiAvailable = () => (getConfig().provider === "claude-code" ? !!findClaude() : apiKeyAvailable());
+/** whether the chosen provider has what it needs (it may still fail, e.g. a wrong key) */
+export function aiAvailable(t = savedTarget()) {
+  switch (t.provider) {
+    case "claude-code": return !!findClaude();
+    case "anthropic": return !!t.key || anthropicEnvAuth();
+    case "ollama": return true;
+    case "custom": return !!t.url && !!t.model;
+    default: return !!t.key;
+  }
+}
 
-const SYSTEM_PROMPT = `You are the built-in AI editor of "Farid Editor", a multi-track video editor and motion-graphics tool (similar to Filmora / After Effects).
+const SYSTEM_PROMPT = `You are the built-in AI editor of "NomadMovie", a multi-track video editor and motion-graphics tool (similar to Filmora / After Effects).
 The user talks to you in any language and you edit their project by returning a list of actions that the app executes in order.
 
 ## Coordinate system and timing
@@ -111,50 +131,158 @@ interface Turn {
   image?: string; // data URL
 }
 
-function callJSON(system: string, turns: Turn[], schema: object, effort: Effort = "medium") {
-  const cfg = getConfig();
-  if (cfg.provider === "claude-code") return callClaudeCode(system, turns, schema, effort);
-  if (!apiKeyAvailable()) throw new Error("No API key set. Open Settings and add a key, or switch to your Claude subscription.");
-  return callApi(system, turns, schema, effort);
+function callJSON(system: string, turns: Turn[], schema: object, effort: Effort = "medium", t = savedTarget()) {
+  const name = PROVIDERS[t.provider].label;
+  if (!aiAvailable(t)) {
+    if (t.provider === "claude-code") throw new Error("Claude Code is not installed. Install it (npm i -g @anthropic-ai/claude-code) and run `claude` once to sign in, or pick another AI in Settings.");
+    if (t.provider === "custom") throw new Error("Set the address and model of your AI service in Settings.");
+    throw new Error(`No API key for ${name}. Open Settings (⚙) and add one.`);
+  }
+  if (t.provider === "claude-code") return callClaudeCode(system, turns, schema, effort, t.model);
+  if (t.provider === "anthropic") return callAnthropic(system, turns, schema, effort, t);
+  return callOpenAICompatible(system, turns, schema, t);
 }
 
-async function callApi(system: string, turns: Turn[], schema: object, effort: Effort) {
-  const messages: Anthropic.Beta.BetaMessageParam[] = turns.map((t) => {
-    const m = t.image && /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(t.image);
-    if (!m) return { role: t.role, content: t.text };
+async function callAnthropic(system: string, turns: Turn[], schema: object, effort: Effort, t: Target) {
+  const messages: Anthropic.Beta.BetaMessageParam[] = turns.map((x) => {
+    const m = x.image && /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(x.image);
+    if (!m) return { role: x.role, content: x.text };
     return {
-      role: t.role,
+      role: x.role,
       content: [
         { type: "image", source: { type: "base64", media_type: m[1] as "image/jpeg", data: m[2] } },
-        { type: "text", text: t.text },
+        { type: "text", text: x.text },
       ],
     };
   });
-  const response = await getClient().beta.messages.create({
-    model: getConfig().apiModel,
-    max_tokens: 32000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    cache_control: { type: "ephemeral" },
-    system,
-    output_config: { effort, format: { type: "json_schema", schema: schema as Record<string, unknown> } },
-    messages,
-  }, { timeout: 5 * 60_000 });
-
+  let response;
+  try {
+    response = await anthropic(t.key).beta.messages.create({
+      model: t.model,
+      max_tokens: 32000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      cache_control: { type: "ephemeral" },
+      system,
+      output_config: { effort, format: { type: "json_schema", schema: schema as Record<string, unknown> } },
+      messages,
+    }, { timeout: 5 * 60_000 });
+  } catch (e) {
+    if (e instanceof Anthropic.AuthenticationError) throw new Error("Anthropic rejected the API key. Check it in Settings.");
+    if (e instanceof Anthropic.NotFoundError) throw new Error(`Anthropic has no model called "${t.model}". Pick another model in Settings.`);
+    throw e;
+  }
   if (response.stop_reason === "refusal") throw new Error("The model declined this request.");
   if (response.stop_reason === "max_tokens") throw new Error("The response was too long; try a smaller request.");
   const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
   return JSON.parse(text);
 }
 
+/** pulls the JSON object out of a reply that may be wrapped in prose or code fences */
+function parseJsonReply(text: string) {
+  const s = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  try {
+    return JSON.parse(s);
+  } catch {
+    const a = s.indexOf("{"), b = s.lastIndexOf("}");
+    if (a >= 0 && b > a) return JSON.parse(s.slice(a, b + 1));
+    throw new Error(`The AI did not return valid JSON: ${s.slice(0, 200)}`);
+  }
+}
+
+/**
+ * OpenAI, Gemini, OpenRouter, Ollama, LM Studio and any other service with an OpenAI-style
+ * /chat/completions endpoint. Asks for strict JSON-schema output and steps down to plain JSON mode
+ * (or none) for services that don't support it.
+ */
+async function callOpenAICompatible(system: string, turns: Turn[], schema: object, t: Target) {
+  const name = PROVIDERS[t.provider].label;
+  const messages = [
+    { role: "system", content: `${system}\n\nAlways answer with one JSON object that matches this JSON schema, and nothing else:\n${JSON.stringify(schema)}` },
+    ...turns.map((x) => (x.image
+      ? { role: x.role, content: [{ type: "text", text: x.text }, { type: "image_url", image_url: { url: x.image } }] }
+      : { role: x.role, content: x.text })),
+  ];
+  const formats: (object | undefined)[] = [
+    { type: "json_schema", json_schema: { name: "response", strict: true, schema } },
+    { type: "json_object" },
+    undefined,
+  ];
+  let lastError = "";
+  for (const response_format of formats) {
+    let res: Response;
+    try {
+      res = await fetch(`${t.url}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(t.key ? { Authorization: `Bearer ${t.key}` } : {}),
+          ...(t.provider === "openrouter" ? { "HTTP-Referer": "https://github.com/faridmasjedi/NomadMovie", "X-Title": "NomadMovie" } : {}),
+        },
+        body: JSON.stringify({ model: t.model, messages, ...(response_format ? { response_format } : {}) }),
+        signal: AbortSignal.timeout(5 * 60_000),
+      });
+    } catch (e) {
+      const hint = t.provider === "ollama" ? " Is Ollama (or LM Studio) running?" : "";
+      throw new Error(`Could not reach ${name} at ${t.url}.${hint} (${e instanceof Error ? e.message : e})`);
+    }
+    const body = await res.text();
+    if (res.status === 401 || res.status === 403) throw new Error(`${name} rejected the API key. Check it in Settings.`);
+    if (res.status === 404 && /model/i.test(body)) throw new Error(`${name} has no model called "${t.model}". Pick another model in Settings.`);
+    if (!res.ok) {
+      lastError = `${name} error ${res.status}: ${body.slice(0, 300)}`;
+      // structured output not supported → try the next, simpler format
+      if (res.status === 400 || res.status === 422) continue;
+      throw new Error(lastError);
+    }
+    const j = JSON.parse(body);
+    const text = j.choices?.[0]?.message?.content;
+    if (typeof text !== "string" || !text.trim()) throw new Error(`${name} returned an empty answer.`);
+    return parseJsonReply(text);
+  }
+  throw new Error(lastError);
+}
+
+/** the models a provider offers (for the model picker in Settings) */
+export async function listModels(o: { provider: Provider; key?: string; url?: string }): Promise<string[]> {
+  const p = o.provider;
+  const key = o.key || keyFor(p), url = (o.url || urlFor(p)).replace(/\/+$/, "");
+  if (p === "claude-code") return ["default", "opus", "sonnet", "haiku"];
+  if (p === "anthropic") {
+    const page = await anthropic(key).models.list({ limit: 100 });
+    return page.data.map((m) => m.id);
+  }
+  const res = await fetch(`${url}/models`, { headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: AbortSignal.timeout(15_000) });
+  if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
+  const j = await res.json();
+  return ((j.data ?? j.models ?? []) as { id?: string; name?: string }[])
+    .map((m) => (m.id ?? m.name ?? "").replace(/^models\//, ""))
+    .filter(Boolean)
+    .sort();
+}
+
+/** a tiny real request, to check a connection from Settings before saving */
+export async function testProvider(o: { provider: Provider; key?: string; model?: string; url?: string }) {
+  const p = o.provider;
+  const t: Target = {
+    provider: p,
+    key: o.key || keyFor(p),
+    model: o.model || modelFor(p),
+    url: (o.url || urlFor(p)).replace(/\/+$/, ""),
+  };
+  const schema = { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"], additionalProperties: false };
+  await callJSON('This is a connection test. Answer with {"ok": true}.', [{ role: "user", text: "Connection test." }], schema, "low", t);
+  return { ok: true };
+}
+
 /**
  * Runs the request through the local Claude Code CLI (`claude -p`), which uses the
  * user's own claude.ai subscription login (Pro / Max) instead of an API key.
  */
-async function callClaudeCode(system: string, turns: Turn[], schema: object, effort: Effort) {
+async function callClaudeCode(system: string, turns: Turn[], schema: object, effort: Effort, model: string) {
   const bin = findClaude();
-  if (!bin) throw new Error("Claude Code is not installed. Install it (npm i -g @anthropic-ai/claude-code), run `claude` once to sign in, or switch to an API key in Settings.");
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-ai-"));
+  if (!bin) throw new Error("Claude Code is not installed. Install it (npm i -g @anthropic-ai/claude-code), run `claude` once to sign in, or pick another AI in Settings.");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nomad-ai-"));
   try {
     // history + current request flattened into one prompt; images are saved and read with the Read tool
     let prompt = "";
@@ -175,7 +303,6 @@ async function callClaudeCode(system: string, turns: Turn[], schema: object, eff
     }
     prompt += last.text;
 
-    const cfg = getConfig();
     const args = [
       "-p",
       "--output-format", "json",
@@ -185,7 +312,7 @@ async function callClaudeCode(system: string, turns: Turn[], schema: object, eff
       "--effort", effort,
       "--tools", images ? "Read" : "",
       ...(images ? ["--allowedTools", "Read", "--add-dir", dir] : []),
-      ...(cfg.cliModel && cfg.cliModel !== "default" ? ["--model", cfg.cliModel] : []),
+      ...(model && model !== "default" ? ["--model", model] : []),
     ];
     const out = await new Promise<string>((resolve, reject) => {
       const p = spawn(bin, args, { cwd: dir, env: claudeEnv(), stdio: ["pipe", "pipe", "pipe"] });

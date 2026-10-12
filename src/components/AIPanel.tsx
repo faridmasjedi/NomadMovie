@@ -77,11 +77,12 @@ export function AIPanel() {
       {!h.ai && (
         <div className="ai-card" style={{ borderColor: "var(--warn)", marginBottom: 10 }}>
           <div className="hint">
-            {h.provider === "claude-code"
-              ? h.claudeCode.found
-                ? <>Claude Code is installed but not signed in. Run <span className="kbd">claude</span> in a terminal and log in with your Claude account.</>
-                : <>To use your Claude subscription, install Claude Code (<span className="kbd">npm i -g @anthropic-ai/claude-code</span>) and run <span className="kbd">claude</span> once to sign in — or add an API key in ⚙ Settings.</>
-              : <>No API key set. Add one in ⚙ Settings, or switch to your Claude subscription.</>}
+            {h.provider === "claude-code" && h.claudeCode.found
+              ? <>Claude Code is installed but not signed in. Run <span className="kbd">claude</span> in a terminal and log in — or pick another AI.</>
+              : <>Connect an AI to edit by chatting: your Claude subscription, an API key (Claude, ChatGPT, Gemini, OpenRouter), or a free local model.</>}
+            <div style={{ margin: "8px 0" }}>
+              <button className="primary" onClick={() => useStore.getState().set({ settingsOpen: true })}>Connect an AI</button>
+            </div>
             {" "}The local smart tools (silence removal, beats, scenes…) work without AI.
           </div>
         </div>

@@ -315,3 +315,15 @@ input[type="range"] { accent-color: var(--accent); min-width: 0; direction: ltr;
 .mask-tools button { font-size: 11px; padding: 6px 2px; }
 .mask-progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 6px 0; }
 .mask-progress i { display: block; height: 100%; background: var(--accent); }
+
+/* settings: AI choices */
+.modal.settings { width: min(640px, 94vw); max-height: 90vh; overflow: auto; }
+.ai-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+.ai-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); white-space: normal; height: auto; }
+.ai-choice b { font-size: 12.5px; display: flex; gap: 6px; align-items: center; }
+.ai-choice span { font-size: 11px; color: var(--dim); line-height: 1.35; font-weight: 400; }
+.ai-choice.on { border-color: var(--accent); background: var(--accent-bg); }
+.ai-choice .tag { font-size: 9.5px; padding: 1px 6px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; }
+.ai-choice .tag.ok { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
+.ai-detail { margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); display: flex; flex-direction: column; gap: 8px; }
+.ai-detail a { color: var(--accent2); }

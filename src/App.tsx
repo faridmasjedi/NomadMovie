@@ -16,7 +16,7 @@ import { ContextMenuHost } from "./components/ContextMenu";
 export default function App() {
   const toast = useStore((s) => s.toast);
   const busy = useStore((s) => s.busy);
-  const [tlH, setTlH] = useState(() => Number(localStorage.getItem("nova-tl-h")) || 300);
+  const [tlH, setTlH] = useState(() => Number(localStorage.getItem("nomad-tl-h")) || 300);
 
   // restore last session + autosave
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function App() {
     const mv = (ev: PointerEvent) => {
       const h = Math.min(window.innerHeight - 220, Math.max(140, h0 - (ev.clientY - y0)));
       setTlH(h);
-      localStorage.setItem("nova-tl-h", String(h));
+      localStorage.setItem("nomad-tl-h", String(h));
     };
     const up = () => {
       window.removeEventListener("pointermove", mv);

@@ -1,0 +1,158 @@
+name: Release
+
+# Publish a new version in either of two ways:
+#   • Actions tab → "Release" → Run workflow → enter a version such as 1.2.0
+#   • or push a tag:  git tag v1.2.0 && git push origin v1.2.0
+# Builds macOS (Apple Silicon + Intel), Windows and Linux, then creates a GitHub Release with the installers.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (for example 1.2.0)"
+        required: true
+      prerelease:
+        description: "Mark as a pre-release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: v
+        name: Work out the version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then v="${INPUT_VERSION#v}"; else v="${GITHUB_REF_NAME#v}"; fi
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$v' is not a version like 1.2.0"; exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "tag=v$v" >> "$GITHUB_OUTPUT"
+      - name: Create the tag (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          if git rev-parse "$TAG" >/dev/null 2>&1; then echo "::error::Tag $TAG already exists"; exit 1; fi
+          git tag "$TAG"
+          git push origin "$TAG"
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (Apple Silicon)
+            os: macos-latest
+            args: --mac --arm64
+          - name: macOS (Intel)
+            os: macos-latest
+            args: --mac --x64
+            ffmpeg_arch: x64
+          - name: Windows
+            os: windows-latest
+            args: --win --x64
+          - name: Linux
+            os: ubuntu-latest
+            args: --linux --x64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Bundle ffmpeg for Intel Macs
+        if: matrix.ffmpeg_arch
+        shell: bash
+        run: |
+          rm -f node_modules/ffmpeg-static/ffmpeg
+          npm_config_arch=${{ matrix.ffmpeg_arch }} npm rebuild ffmpeg-static
+          file node_modules/ffmpeg-static/ffmpeg
+      - name: Set version ${{ needs.prepare.outputs.version }}
+        run: npm version ${{ needs.prepare.outputs.version }} --no-git-tag-version --allow-same-version
+      - run: npm run build
+      - run: npm run build:electron
+      - name: Package
+        shell: bash
+        env:
+          # optional signing — add these repository secrets to sign (and notarize) the installers
+          CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # without a certificate the build is unsigned (macOS builds get an ad-hoc signature, see build/adhoc-sign.cjs)
+          if [ -z "$CSC_LINK" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          if [ -z "$APPLE_ID" ]; then unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
+          npx electron-builder ${{ matrix.args }} --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ strategy.job-index }}
+          if-no-files-found: error
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+
+  publish:
+    name: Publish GitHub Release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - run: ls -la installers
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: NomadMovie ${{ needs.prepare.outputs.version }}
+          prerelease: ${{ inputs.prerelease || contains(needs.prepare.outputs.version, '-') }}
+          generate_release_notes: true
+          files: installers/*
+          body: |
+            ## Download
+
+            | System | File |
+            | --- | --- |
+            | macOS, Apple Silicon (M1–M4) | `NomadMovie-${{ needs.prepare.outputs.version }}-mac-arm64.dmg` |
+            | macOS, Intel | `NomadMovie-${{ needs.prepare.outputs.version }}-mac-x64.dmg` |
+            | Windows 10/11 | `NomadMovie-${{ needs.prepare.outputs.version }}-windows-setup.exe` |
+            | Linux | `.AppImage` (any distro) or `.deb` (Ubuntu/Debian) |
+
+            **First launch on macOS:** if macOS says it can't check the app for malicious software, right-click NomadMovie in Applications → **Open** → **Open**. (Only needed once, and only for builds that aren't notarized by Apple.)
+            **Windows:** if SmartScreen appears, click **More info → Run anyway**.

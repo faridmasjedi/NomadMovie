@@ -21,12 +21,12 @@ const byName = new Map(SRC.map((t) => [t.name, t]));
 /* custom transitions in the same GLSL format */
 const CUSTOM: GLTransitionSource[] = [
   {
-    name: "nova_flash",
+    name: "nomad_flash",
     defaultParams: {},
     glsl: `vec4 transition(vec2 uv){ float f = 1.0 - abs(progress - 0.5) * 2.0; vec4 c = mix(getFromColor(uv), getToColor(uv), smoothstep(0.4, 0.6, progress)); return mix(c, vec4(1.0), pow(f, 2.0)); }`,
   },
   {
-    name: "nova_whip",
+    name: "nomad_whip",
     defaultParams: { direction: [1, 0] },
     glsl: `uniform vec2 direction; // = vec2(1.0, 0.0)
       vec4 transition(vec2 uv){ float e = progress < 0.5 ? 2.0*progress*progress : 1.0 - pow(-2.0*progress + 2.0, 2.0) / 2.0; float blur = sin(progress * 3.14159) * 0.08;
@@ -34,28 +34,28 @@ const CUSTOM: GLTransitionSource[] = [
         s += (p.x >= 0.0 && p.x <= 1.0 && p.y >= 0.0 && p.y <= 1.0) ? getFromColor(p) : getToColor(fract(p)); } return s / 16.0; }`,
   },
   {
-    name: "nova_lightleak",
+    name: "nomad_lightleak",
     defaultParams: {},
     glsl: `vec4 transition(vec2 uv){ float f = sin(progress * 3.14159); vec4 c = mix(getFromColor(uv), getToColor(uv), smoothstep(0.3, 0.7, progress));
       vec3 leak = vec3(1.0, 0.55, 0.2) * exp(-length((uv - vec2(0.1 + progress * 0.8, 0.7)) * vec2(1.0, 1.5)) * 2.2) + vec3(1.0, 0.25, 0.45) * exp(-length(uv - vec2(0.9 - progress * 0.6, 0.2)) * 3.0);
       c.rgb = 1.0 - (1.0 - c.rgb) * (1.0 - leak * f * 1.5); return c; }`,
   },
   {
-    name: "nova_blurdissolve",
+    name: "nomad_blurdissolve",
     defaultParams: {},
     glsl: `vec4 transition(vec2 uv){ float b = sin(progress * 3.14159) * 0.012; vec4 a = vec4(0.0); vec4 c = vec4(0.0);
       for (int x = -3; x <= 3; x++) for (int y = -3; y <= 3; y++) { vec2 o = vec2(float(x), float(y)) * b; a += getFromColor(uv + o); c += getToColor(uv + o); }
       return mix(a, c, smoothstep(0.0, 1.0, progress)) / 49.0; }`,
   },
   {
-    name: "nova_zoomblur",
+    name: "nomad_zoomblur",
     defaultParams: {},
     glsl: `vec4 transition(vec2 uv){ float s = sin(progress * 3.14159) * 0.35; vec4 a = vec4(0.0); vec4 c = vec4(0.0);
       for (int i = 0; i < 20; i++) { float t = float(i) / 19.0; vec2 p = 0.5 + (uv - 0.5) * (1.0 - s * t); a += getFromColor(0.5 + (p - 0.5) / (1.0 + progress)); c += getToColor(0.5 + (p - 0.5) * (2.0 - progress)); }
       return mix(a, c, step(0.5, progress)) / 20.0; }`,
   },
   {
-    name: "nova_spinblur",
+    name: "nomad_spinblur",
     defaultParams: {},
     glsl: `vec4 transition(vec2 uv){ float s = sin(progress * 3.14159) * 0.6; vec4 a = vec4(0.0); vec4 c = vec4(0.0); vec2 d = uv - 0.5;
       for (int i = 0; i < 20; i++) { float ang = (float(i) / 19.0 - 0.5) * s + progress * 3.14159; mat2 r = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)); vec2 p = 0.5 + r * d; a += getFromColor(p); c += getToColor(p); }
@@ -72,7 +72,7 @@ const TABLE: [string, string, string, string, Record<string, Uniform>?][] = [
   ["dipBlack", "Dip to Black", "Basic", "fadecolor", { color: [0, 0, 0] }],
   ["dipWhite", "Dip to White", "Basic", "fadecolor", { color: [1, 1, 1] }],
   ["fadeGray", "Fade Grayscale", "Basic", "fadegrayscale"],
-  ["blurDissolve", "Blur Dissolve", "Basic", "nova_blurdissolve"],
+  ["blurDissolve", "Blur Dissolve", "Basic", "nomad_blurdissolve"],
   ["luminanceMelt", "Luminance Melt", "Basic", "luminance_melt"],
   ["multiplyBlend", "Multiply Blend", "Basic", "multiply_blend"],
   ["colorPhase", "Color Phase", "Basic", "colorphase"],
@@ -127,13 +127,13 @@ const TABLE: [string, string, string, string, Record<string, Uniform>?][] = [
   ["squeeze", "Squeeze", "Zoom & Warp", "squeeze"],
   ["flyeye", "Fly Eye", "Zoom & Warp", "flyeye"],
   // Speed Blur
-  ["whipLeft", "Whip Pan Left", "Speed Blur", "nova_whip", { direction: [1, 0] }],
-  ["whipRight", "Whip Pan Right", "Speed Blur", "nova_whip", { direction: [-1, 0] }],
-  ["whipUp", "Whip Pan Up", "Speed Blur", "nova_whip", { direction: [0, -1] }],
-  ["whipDown", "Whip Pan Down", "Speed Blur", "nova_whip", { direction: [0, 1] }],
+  ["whipLeft", "Whip Pan Left", "Speed Blur", "nomad_whip", { direction: [1, 0] }],
+  ["whipRight", "Whip Pan Right", "Speed Blur", "nomad_whip", { direction: [-1, 0] }],
+  ["whipUp", "Whip Pan Up", "Speed Blur", "nomad_whip", { direction: [0, -1] }],
+  ["whipDown", "Whip Pan Down", "Speed Blur", "nomad_whip", { direction: [0, 1] }],
   ["crossZoom", "Speed Zoom", "Speed Blur", "CrossZoom"],
-  ["zoomBlur", "Zoom Blur", "Speed Blur", "nova_zoomblur"],
-  ["spinBlur", "Spin Blur", "Speed Blur", "nova_spinblur"],
+  ["zoomBlur", "Zoom Blur", "Speed Blur", "nomad_zoomblur"],
+  ["spinBlur", "Spin Blur", "Speed Blur", "nomad_spinblur"],
   ["linearBlur", "Linear Blur", "Speed Blur", "LinearBlur"],
   ["tangentBlur", "Tangent Motion Blur", "Speed Blur", "tangentMotionBlur"],
   ["defocus", "Defocus", "Speed Blur", "DefocusBlur"],
@@ -201,8 +201,8 @@ const TABLE: [string, string, string, string, Record<string, Uniform>?][] = [
   ["flicker", "Flicker", "Glitch", "Drop_Zone_Flicker"],
   ["randomNoise", "Random Noise", "Glitch", "randomNoisex"],
   // Light & Burn
-  ["flash", "Flash", "Light & Burn", "nova_flash"],
-  ["lightLeak", "Light Leak", "Light & Burn", "nova_lightleak"],
+  ["flash", "Flash", "Light & Burn", "nomad_flash"],
+  ["lightLeak", "Light Leak", "Light & Burn", "nomad_lightleak"],
   ["overexposure", "Overexposure", "Light & Burn", "Overexposure"],
   ["filmBurn", "Film Burn", "Light & Burn", "FilmBurn"],
   ["burn", "Burn", "Light & Burn", "burn"],

@@ -35,6 +35,8 @@ interface State {
   pick: { label: string; cb: (x: number, y: number) => void } | null;
   /** drawing / editing a clip's mask on the preview; `ai` holds the clicked subject points (0..1, label) */
   maskEdit: { clipId: string; tool: MaskTool; point?: number; ai?: [number, number, number][] } | null;
+  /** the Settings dialog is open */
+  settingsOpen: boolean;
   /** AI mask work in progress (selection or tracking) */
   maskWork: { clipId: string; label: string; progress?: number } | null;
 
@@ -98,6 +100,7 @@ export const useStore = create<State>((set, get) => ({
   pick: null,
   maskEdit: null,
   maskWork: null,
+  settingsOpen: false,
 
   commit: (fn, mergeKey) => {
     const { project, past } = get();

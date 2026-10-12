@@ -3,45 +3,93 @@ import os from "node:os";
 import path from "node:path";
 import { execFile, execFileSync } from "node:child_process";
 
-export type Provider = "claude-code" | "api";
+export type Provider = "claude-code" | "anthropic" | "openai" | "gemini" | "openrouter" | "ollama" | "custom";
+
+export interface ProviderInfo {
+  label: string;
+  /** shown in the top bar */
+  short: string;
+  /** OpenAI-compatible endpoint (all providers except Claude) */
+  baseUrl?: string;
+  defaultModel: string;
+  needsKey: boolean;
+  /** where to get a key */
+  keyUrl?: string;
+  /** environment variable read when no key is saved */
+  env?: string;
+}
+
+export const PROVIDERS: Record<Provider, ProviderInfo> = {
+  "claude-code": { label: "Claude subscription (via Claude Code)", short: "Claude", defaultModel: "default", needsKey: false },
+  anthropic: { label: "Anthropic (Claude) API", short: "Claude API", defaultModel: "claude-opus-5-5", needsKey: true, keyUrl: "https://console.anthropic.com/settings/keys", env: "ANTHROPIC_API_KEY" },
+  openai: { label: "OpenAI (ChatGPT) API", short: "OpenAI", baseUrl: "https://api.openai.com/v1", defaultModel: "gpt-5", needsKey: true, keyUrl: "https://platform.openai.com/api-keys", env: "OPENAI_API_KEY" },
+  gemini: { label: "Google Gemini API", short: "Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", defaultModel: "gemini-2.5-flash", needsKey: true, keyUrl: "https://aistudio.google.com/apikey", env: "GEMINI_API_KEY" },
+  openrouter: { label: "OpenRouter (hundreds of models)", short: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", defaultModel: "openrouter/auto", needsKey: true, keyUrl: "https://openrouter.ai/keys", env: "OPENROUTER_API_KEY" },
+  ollama: { label: "Local model (Ollama / LM Studio)", short: "Local AI", baseUrl: "http://localhost:11434/v1", defaultModel: "llama3.1", needsKey: false },
+  custom: { label: "Other OpenAI-compatible service", short: "Custom AI", baseUrl: "", defaultModel: "", needsKey: false },
+};
 
 export interface Config {
   provider: Provider;
   /** model alias for Claude Code ("default" | "opus" | "sonnet" | "haiku") */
   cliModel: string;
-  apiKey: string;
-  apiModel: string;
+  keys: Partial<Record<Provider, string>>;
+  models: Partial<Record<Provider, string>>;
+  /** endpoint overrides (Ollama / LM Studio address, custom service) */
+  urls: Partial<Record<Provider, string>>;
 }
 
 /** resolved lazily so the desktop app can point it at its userData folder before first use */
-const dataDir = () => process.env.NOVA_DATA_DIR ?? path.join(os.homedir(), ".farid-editor");
+const dataDir = () => process.env.NOMAD_DATA_DIR ?? path.join(os.homedir(), ".nomadmovie");
 const configFile = () => path.join(dataDir(), "config.json");
+/** settings saved under the app's earlier names (read once if there are no settings yet) */
+const legacyConfigFiles = () => [path.join(os.homedir(), ".farid-editor", "config.json"), path.join(os.homedir(), ".nova-editor", "config.json")];
 
 let cache: Config | null = null;
 
+type Saved = Omit<Partial<Config>, "provider"> & { provider?: Provider | "api"; apiKey?: string; apiModel?: string };
+
 export function getConfig(): Config {
   if (cache) return cache;
-  let saved: Partial<Config> = {};
-  try {
-    saved = JSON.parse(fs.readFileSync(configFile(), "utf8"));
-  } catch {
-    /* first run */
+  let saved: Saved = {};
+  for (const f of [configFile(), ...legacyConfigFiles()]) {
+    try {
+      saved = JSON.parse(fs.readFileSync(f, "utf8"));
+      break;
+    } catch {
+      /* not there */
+    }
   }
-  cache = {
-    provider: saved.provider ?? (findClaude() ? "claude-code" : "api"),
-    cliModel: saved.cliModel ?? "default",
-    apiKey: saved.apiKey ?? "",
-    apiModel: saved.apiModel ?? process.env.NOVA_MODEL ?? "claude-opus-5-5",
-  };
+  // settings from before multi-provider support: provider "api" + one Anthropic key
+  const keys = { ...saved.keys };
+  const models = { ...saved.models };
+  if (saved.apiKey && !keys.anthropic) keys.anthropic = saved.apiKey;
+  if (saved.apiModel && !models.anthropic) models.anthropic = saved.apiModel;
+  if (process.env.NOMAD_MODEL && !models.anthropic) models.anthropic = process.env.NOMAD_MODEL;
+  const provider = saved.provider === "api" ? "anthropic" : saved.provider && saved.provider in PROVIDERS ? saved.provider : findClaude() ? "claude-code" : "anthropic";
+  cache = { provider, cliModel: saved.cliModel ?? "default", keys, models, urls: { ...saved.urls } };
   return cache;
 }
 
 export function saveConfig(patch: Partial<Config>) {
-  cache = { ...getConfig(), ...patch };
+  const cur = getConfig();
+  cache = {
+    ...cur,
+    ...patch,
+    keys: { ...cur.keys, ...patch.keys },
+    models: { ...cur.models, ...patch.models },
+    urls: { ...cur.urls, ...patch.urls },
+  };
+  for (const k of Object.keys(cache.keys) as Provider[]) if (!cache.keys[k]) delete cache.keys[k];
   fs.mkdirSync(dataDir(), { recursive: true });
   fs.writeFileSync(configFile(), JSON.stringify(cache, null, 2), { mode: 0o600 });
   return cache;
 }
+
+/** key for a provider: saved in settings, else from its environment variable */
+export const keyFor = (p: Provider) => getConfig().keys[p] || (PROVIDERS[p].env ? process.env[PROVIDERS[p].env!] : "") || "";
+export const modelFor = (p: Provider) => (p === "claude-code" ? getConfig().cliModel : getConfig().models[p] || PROVIDERS[p].defaultModel);
+export const urlFor = (p: Provider) => (getConfig().urls[p] || PROVIDERS[p].baseUrl || "").replace(/\/+$/, "");
 
 /* ---------------- Claude Code CLI discovery ---------------- */
 
@@ -62,7 +110,7 @@ export function findClaude(): string | null {
   if (claudePath !== undefined) return claudePath;
   const exe = process.platform === "win32" ? "claude.cmd" : "claude";
   const candidates = [
-    process.env.NOVA_CLAUDE_PATH,
+    process.env.NOMAD_CLAUDE_PATH,
     ...(process.env.PATH ?? "").split(path.delimiter).map((d) => path.join(d, exe)),
     path.join(os.homedir(), ".claude", "local", exe),
     path.join(os.homedir(), ".local", "bin", exe),

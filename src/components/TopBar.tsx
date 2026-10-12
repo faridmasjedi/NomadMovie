@@ -15,7 +15,8 @@ export function TopBar() {
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
   const [exporting, setExporting] = useState(false);
-  const [settings, setSettings] = useState(false);
+  const settings = useStore((st) => st.settingsOpen);
+  const setSettings = (v: boolean) => useStore.getState().set({ settingsOpen: v });
   const h = health();
   const fileRef = useRef<HTMLInputElement>(null);
   const s = useStore.getState;
@@ -38,7 +39,7 @@ export function TopBar() {
 
   return (
     <div className="topbar">
-      <div className="logo"><span className="dot" />Farid Editor</div>
+      <div className="logo"><span className="dot" />NomadMovie</div>
       <input className="name" value={p.name} onChange={(e) => s().commit((x) => void (x.name = e.target.value), "pname")} />
       <button className="ghost icon" title="Undo" disabled={!canUndo} onClick={() => s().undo()}><Icon d={I.undo} /></button>
       <button className="ghost icon" title="Redo" disabled={!canRedo} onClick={() => s().redo()}><Icon d={I.redo} /></button>
@@ -48,8 +49,8 @@ export function TopBar() {
       </select>
       <span className="spacer" />
       <span className="status-pill">
-        <b className={h.ai ? "on" : "off"} onClick={() => setSettings(true)} title={h.provider === "claude-code" ? "AI: your Claude subscription (Claude Code)" : "AI: Anthropic API key"}>
-          ● AI {h.provider === "claude-code" ? "(Claude subscription)" : "(API key)"}
+        <b className={h.ai ? "on" : "off"} onClick={() => setSettings(true)} title={h.ai ? `AI: ${h.providerLabel} · ${h.model}` : "AI is not connected — click to set it up"}>
+          ● AI {h.ai ? `(${h.providerLabel})` : "— connect"}
         </b>
         <b className={h.ffmpeg ? "on" : "off"}>● ffmpeg</b>
         <b className={h.whisper ? "on" : "off"}>● Whisper</b>
@@ -60,7 +61,7 @@ export function TopBar() {
         s().set({ media: {} });
         s().setProject(newProject());
       }}>New</button>
-      <button className="ghost icon" title="Open project file (.farid.json)" onClick={() => fileRef.current?.click()}><Icon d={I.folder} /></button>
+      <button className="ghost icon" title="Open project file (.nomad.json)" onClick={() => fileRef.current?.click()}><Icon d={I.folder} /></button>
       <input ref={fileRef} type="file" accept=".json" hidden onChange={async (e) => {
         const f = e.target.files?.[0];
         if (!f) return;
@@ -75,7 +76,7 @@ export function TopBar() {
         }
         e.target.value = "";
       }} />
-      <button className="ghost icon" title="Save project file" onClick={() => download(new Blob([JSON.stringify(s().project, null, 1)], { type: "application/json" }), `${p.name}.farid.json`)}>
+      <button className="ghost icon" title="Save project file" onClick={() => download(new Blob([JSON.stringify(s().project, null, 1)], { type: "application/json" }), `${p.name}.nomad.json`)}>
         <Icon d={I.save} />
       </button>
       <button className="primary" onClick={() => setExporting(true)}><Icon d={I.export} /> Export</button>

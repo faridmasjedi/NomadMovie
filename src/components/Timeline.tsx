@@ -182,7 +182,7 @@ export function Timeline() {
       else st().notify("Drop transitions and animations onto a clip", "info");
       return;
     }
-    const id = e.dataTransfer.getData("nova/media");
+    const id = e.dataTransfer.getData("nomad/media");
     const m = st().media[id];
     if (!m) return;
     const t = snap(xToTime(e.clientX), []).t;

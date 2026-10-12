@@ -1,6 +1,7 @@
 import type { MediaItem, Project } from "../types";
 import { importFile } from "./media";
 
+// name kept from the first version so existing projects stay available
 const DB = "nova-editor";
 let dbp: Promise<IDBDatabase> | null = null;
 

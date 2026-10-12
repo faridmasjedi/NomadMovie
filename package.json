@@ -1,5 +1,5 @@
 {
-  "name": "farid-editor",
+  "name": "nomadmovie",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "build:electron": "esbuild electron/main.ts --bundle --platform=node --format=esm --packages=external --target=node20 --outfile=dist-electron/main.mjs",
     "app": "npm run build && npm run build:electron && electron .",
-    "dist": "npm run build && npm run build:electron && electron-builder --mac --publish never"
+    "dist": "npm run build && npm run build:electron && electron-builder --publish never",
+    "dist:mac": "npm run build && npm run build:electron && electron-builder --mac --publish never"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
@@ -44,13 +45,17 @@
     "vite": "^5.4.11",
     "zustand": "^4.5.5"
   },
-  "productName": "Farid Editor",
-  "description": "AI-powered video editor and motion graphics app",
-  "author": "Farid Masjedi",
+  "productName": "NomadMovie",
+  "description": "Free, open-source video editor with AI: timeline editing, motion graphics, masks and AI subject cut-out, and an assistant that edits from chat.",
+  "author": {
+    "name": "Farid Masjedi",
+    "email": "farid.masjedi1985@gmail.com"
+  },
   "main": "dist-electron/main.mjs",
   "build": {
-    "appId": "com.faridmasjedi.farid-editor",
-    "productName": "Farid Editor",
+    "appId": "com.faridmasjedi.nomadmovie",
+    "productName": "NomadMovie",
+    "copyright": "Copyright © 2026 Farid Masjedi",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -63,20 +68,60 @@
     "asarUnpack": [
       "node_modules/ffmpeg-static/**"
     ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "mac": {
       "category": "public.app-category.video",
       "target": [
-        "dir",
-        "dmg"
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "zip"
+        }
       ],
-      "identity": null,
       "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Farid Editor uses the microphone to record voice-overs."
+        "NSMicrophoneUsageDescription": "NomadMovie uses the microphone to record voice-overs."
       }
     },
     "dmg": {
-      "title": "Farid Editor"
-    }
+      "title": "NomadMovie ${version}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis"
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-${version}-windows-setup.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo;Video;AudioVideoEditing",
+      "icon": "build/icon.png",
+      "maintainer": "Farid Masjedi <farid.masjedi1985@gmail.com>",
+      "synopsis": "Video editor with AI"
+    },
+    "afterSign": "build/adhoc-sign.cjs"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/faridmasjedi/NomadMovie",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faridmasjedi/NomadMovie.git"
+  },
+  "bugs": {
+    "url": "https://github.com/faridmasjedi/NomadMovie/issues"
   }
 }

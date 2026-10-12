@@ -16,7 +16,7 @@ import { openMenu, type MenuItem } from "./ContextMenu";
 /* drag & drop payloads from the Effects / Transitions panels          */
 /* ------------------------------------------------------------------ */
 
-export const FX_MIME = "nova/fx";
+export const FX_MIME = "nomad/fx";
 export interface FxPayload {
   kind: "effect" | "look" | "transition" | "anim";
   id: string;

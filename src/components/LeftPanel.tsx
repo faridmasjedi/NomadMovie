@@ -146,7 +146,7 @@ function MediaTab() {
             key={m.id}
             className="media-card"
             draggable
-            onDragStart={(e) => e.dataTransfer.setData("nova/media", m.id)}
+            onDragStart={(e) => e.dataTransfer.setData("nomad/media", m.id)}
             onDoubleClick={() => add(m)}
             title="Drag to the timeline or double-click"
           >

@@ -17,4 +17,4 @@ import "./styles.css";
 createRoot(document.getElementById("root")!).render(<App />);
 
 // handy for debugging from the devtools console
-if (import.meta.env.DEV) import("./store").then(({ useStore }) => ((window as unknown as { nova: unknown }).nova = useStore));
+if (import.meta.env.DEV) import("./store").then(({ useStore }) => ((window as unknown as { nomad: unknown }).nomad = useStore));

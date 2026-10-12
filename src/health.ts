@@ -2,7 +2,9 @@ import { create } from "zustand";
 
 interface Health {
   ai: boolean;
-  provider: "claude-code" | "api";
+  provider: string;
+  providerLabel: string;
+  model: string;
   claudeCode: { found: boolean; loggedIn: boolean; account?: string };
   ffmpeg: boolean;
   whisper: boolean;
@@ -12,6 +14,8 @@ interface Health {
 const useHealth = create<Health>(() => ({
   ai: false,
   provider: "claude-code",
+  providerLabel: "",
+  model: "",
   claudeCode: { found: false, loggedIn: false },
   ffmpeg: false,
   whisper: false,

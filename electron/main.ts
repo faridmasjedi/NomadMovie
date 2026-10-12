@@ -1,10 +1,33 @@
 import { app, BrowserWindow, Menu, dialog, session, shell } from "electron";
+import fs from "node:fs";
 import path from "node:path";
 
 // fixed local port: the editor's saved projects (IndexedDB) are tied to this origin
 const PORT = 47821;
 
-process.env.NOVA_DATA_DIR ??= app.getPath("userData");
+// the app was called "Farid Editor" (and before that "Nova Editor"): on the first start, bring its projects and
+// settings along. (Electron creates the new data folder before this runs, so a marker file records the migration.)
+const userData = app.getPath("userData");
+const migrated = path.join(userData, ".migrated");
+if (!fs.existsSync(migrated)) {
+  for (const old of ["Farid Editor", "Nova Editor"]) {
+    const dir = path.join(app.getPath("appData"), old);
+    if (!fs.existsSync(path.join(dir, "IndexedDB"))) continue;
+    try {
+      fs.cpSync(dir, userData, { recursive: true, force: true, filter: (src) => !/Singleton|lockfile|\.lock$/i.test(path.basename(src)) });
+    } catch (e) {
+      console.error("could not copy the old app data:", e);
+    }
+    break;
+  }
+  try {
+    fs.mkdirSync(userData, { recursive: true });
+    fs.writeFileSync(migrated, new Date().toISOString());
+  } catch {
+    /* read-only data folder: try again next time */
+  }
+}
+process.env.NOMAD_DATA_DIR ??= userData;
 
 let win: BrowserWindow | null = null;
 
@@ -22,7 +45,7 @@ async function createWindow(url: string) {
     height: 1000,
     minWidth: 1100,
     minHeight: 700,
-    title: "Farid Editor",
+    title: "NomadMovie",
     backgroundColor: "#0d0e12",
     show: false,
     webPreferences: {
@@ -55,7 +78,7 @@ app.whenReady().then(async () => {
   try {
     port = await startServer(PORT, { staticDir: path.join(app.getAppPath(), "dist") });
   } catch (e) {
-    dialog.showErrorBox("Farid Editor", `Could not start the local engine on port ${PORT}.\n\n${e instanceof Error ? e.message : e}`);
+    dialog.showErrorBox("NomadMovie", `Could not start the local engine on port ${PORT}.\n\n${e instanceof Error ? e.message : e}`);
     app.quit();
     return;
   }

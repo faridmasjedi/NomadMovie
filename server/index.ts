@@ -5,8 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
-import { aiAssist, aiSubtitles, aiAvailable } from "./ai.ts";
-import { claudeStatus, findClaude, getConfig, saveConfig, type Config } from "./config.ts";
+import { aiAssist, aiSubtitles, aiAvailable, listModels, testProvider } from "./ai.ts";
+import { claudeStatus, findClaude, getConfig, modelFor, PROVIDERS, saveConfig, urlFor, type Config, type Provider } from "./config.ts";
 import { registerImport } from "./importer.ts";
 
 const has = (bin: string, arg = "-version") => {
@@ -20,7 +20,7 @@ const has = (bin: string, arg = "-version") => {
 /** bundled ffmpeg (ffmpeg-static) first, then a system install */
 function resolveFfmpeg(): string | null {
   const candidates: string[] = [];
-  if (process.env.NOVA_FFMPEG) candidates.push(process.env.NOVA_FFMPEG);
+  if (process.env.NOMAD_FFMPEG) candidates.push(process.env.NOMAD_FFMPEG);
   try {
     const p = createRequire(import.meta.url)("ffmpeg-static") as string;
     // inside a packaged Electron app the binary lives outside the asar archive
@@ -94,25 +94,85 @@ export function createApp(opts: { staticDir?: string } = {}) {
     res.json({
       ai: aiAvailable() && (cfg.provider !== "claude-code" || cc.loggedIn),
       provider: cfg.provider,
+      providerLabel: PROVIDERS[cfg.provider].short,
+      model: modelFor(cfg.provider),
       claudeCode: cc,
       ffmpeg: !!FFMPEG,
       whisper: WHISPER,
     });
   });
 
+  const mask = (k: string) => (k ? `${k.slice(0, 6)}…${k.slice(-4)}` : "");
+
   app.get("/api/settings", (_req, res) => {
     const c = getConfig();
-    res.json({ ...c, apiKey: c.apiKey ? `${c.apiKey.slice(0, 10)}…${c.apiKey.slice(-4)}` : "", hasApiKey: !!c.apiKey, envKey: !!process.env.ANTHROPIC_API_KEY });
+    const providers = Object.fromEntries((Object.keys(PROVIDERS) as Provider[]).map((p) => {
+      const info = PROVIDERS[p];
+      const saved = c.keys[p] ?? "";
+      return [p, {
+        ...info,
+        key: mask(saved),
+        hasKey: !!saved,
+        envKey: !saved && !!info.env && !!process.env[info.env],
+        model: modelFor(p),
+        url: urlFor(p),
+      }];
+    }));
+    res.json({ provider: c.provider, cliModel: c.cliModel, providers });
   });
+
+  type SettingsBody = { provider?: Provider; key?: string; model?: string; url?: string };
+  const isProvider = (p: unknown): p is Provider => typeof p === "string" && p in PROVIDERS;
+
   app.post("/api/settings", (req, res) => {
-    const b = req.body as Partial<Config>;
-    const patch: Partial<Config> = {};
-    if (b.provider === "claude-code" || b.provider === "api") patch.provider = b.provider;
-    if (typeof b.cliModel === "string") patch.cliModel = b.cliModel;
-    if (typeof b.apiModel === "string" && b.apiModel.trim()) patch.apiModel = b.apiModel.trim();
-    if (typeof b.apiKey === "string" && !b.apiKey.includes("…")) patch.apiKey = b.apiKey.trim();
+    const b = req.body as SettingsBody & { cliModel?: string; clearKey?: boolean };
+    if (!isProvider(b.provider)) return res.status(400).json({ error: "unknown provider" });
+    const p = b.provider;
+    if (b.clearKey) {
+      saveConfig({ keys: { [p]: "" } });
+      return res.json({ ok: true });
+    }
+    const patch: Partial<Config> = { provider: p };
+    if (p === "claude-code" && typeof b.model === "string") patch.cliModel = b.model;
+    else if (typeof b.model === "string" && b.model.trim()) patch.models = { [p]: b.model.trim() };
+    // the UI shows a masked key; only a newly typed key replaces the saved one
+    if (typeof b.key === "string" && b.key.trim() && !b.key.includes("…")) patch.keys = { [p]: b.key.trim() };
+    if (typeof b.url === "string" && (p === "ollama" || p === "custom")) patch.urls = { [p]: b.url.trim() };
     saveConfig(patch);
     res.json({ ok: true });
+  });
+
+  /** values from the Settings form: a masked key means "the saved one" */
+  const formTarget = (b: SettingsBody) => ({
+    provider: b.provider as Provider,
+    key: b.key && !b.key.includes("…") ? b.key.trim() : undefined,
+    model: b.model?.trim() || undefined,
+    url: b.url?.trim() || undefined,
+  });
+
+  app.post("/api/settings/models", async (req, res) => {
+    const b = req.body as SettingsBody;
+    if (!isProvider(b.provider)) return res.status(400).json({ error: "unknown provider" });
+    try {
+      res.json({ models: await listModels(formTarget(b)) });
+    } catch (e) {
+      res.status(502).json({ error: errMsg(e) });
+    }
+  });
+
+  app.post("/api/settings/test", async (req, res) => {
+    const b = req.body as SettingsBody;
+    if (!isProvider(b.provider)) return res.status(400).json({ error: "unknown provider" });
+    try {
+      if (b.provider === "claude-code") {
+        const st = await claudeStatus();
+        if (!st.found) throw new Error("Claude Code is not installed.");
+        if (!st.loggedIn) throw new Error("Claude Code is installed but not signed in. Run `claude` in a terminal and log in.");
+      }
+      res.json(await testProvider(formTarget(b)));
+    } catch (e) {
+      res.status(200).json({ ok: false, error: errMsg(e) });
+    }
   });
 
   app.post("/api/ai/assist", async (req, res) => {
@@ -148,7 +208,7 @@ export function createApp(opts: { staticDir?: string } = {}) {
     if (!Buffer.isBuffer(body) || !body.length) return void res.status(400).json({ error: "empty upload" });
     const vlen = Math.min(body.length, Number(req.query.vlen ?? body.length));
     const copy = req.query.copy === "1";
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nomad-"));
     const video = path.join(dir, "video.bin");
     const audio = path.join(dir, "audio.wav");
     const output = path.join(dir, `output.${fmt.ext}`);
@@ -175,7 +235,7 @@ export function createApp(opts: { staticDir?: string } = {}) {
   /** local speech-to-text with the openai-whisper CLI, if installed */
   app.post("/api/transcribe", express.raw({ type: () => true, limit: "1gb" }), async (req, res) => {
     if (!WHISPER) return void res.status(501).json({ error: "whisper CLI is not installed (pip install openai-whisper)" });
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-stt-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nomad-stt-"));
     const input = path.join(dir, "audio.wav");
     fs.writeFileSync(input, req.body as Buffer);
     try {
@@ -223,7 +283,7 @@ if (isMain) {
   const prod = process.env.NODE_ENV === "production";
   const port = await startServer(Number(process.env.PORT ?? 5173), { dev: !prod, staticDir: path.resolve("dist") });
   const cfg = getConfig();
-  console.log(`\n  Farid Editor  →  http://localhost:${port}`);
+  console.log(`\n  NomadMovie  →  http://localhost:${port}`);
   console.log(`  ffmpeg: ${FFMPEG ?? "no"}   whisper: ${WHISPER ? "yes" : "no"}`);
   console.log(`  AI: ${cfg.provider === "claude-code" ? `Claude subscription via Claude Code (${findClaude() ?? "not found"})` : "Anthropic API key"}\n`);
 }

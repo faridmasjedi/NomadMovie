@@ -1,88 +1,131 @@
-# Farid Editor
+<div align="center">
 
-An AI-powered desktop video editor: a multi-track timeline like Filmora, keyframed motion graphics like After Effects, a full set of audio tools, and a Claude assistant that edits your project when you describe what you want.
+<img src="build/icon.png" width="112" alt="NomadMovie icon" />
 
-![Farid Editor icon](build/icon.png)
+# NomadMovie
 
-## Run it
+**A free, open-source video editor with AI built in.**
+Edit on a multi-track timeline, animate titles like in After Effects, cut people out of a shot with one click,
+and let an AI assistant do the tedious parts — with the AI you already use.
 
-**Desktop app (macOS)**
+[![CI](https://github.com/faridmasjedi/NomadMovie/actions/workflows/ci.yml/badge.svg)](https://github.com/faridmasjedi/NomadMovie/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/faridmasjedi/NomadMovie?label=download)](https://github.com/faridmasjedi/NomadMovie/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-```bash
-npm install
-npm run dist          # builds release/mac/Farid Editor.app and a .dmg
-```
+**[⬇ Download for macOS, Windows or Linux](https://github.com/faridmasjedi/NomadMovie/releases/latest)**
 
-Open `release/mac/Farid Editor.app`, or drag it into Applications.
+![NomadMovie](docs/screenshot.png)
 
-**During development**
+</div>
 
-```bash
-npm run dev           # browser version at http://localhost:5173
-npm run app           # build and launch the desktop app
-```
+## Why NomadMovie
 
-## AI: use your own Claude subscription
-
-By default Farid Editor runs AI requests through **Claude Code** (`claude -p`) on your computer, so it uses your Claude Pro or Max login and needs no API key.
-
-1. Install Claude Code: `npm i -g @anthropic-ai/claude-code`
-2. Run `claude` once and sign in with your Claude account.
-
-To use an Anthropic API key instead, open **⚙ Settings → Anthropic API key**. Settings are saved in the app's data folder (or `~/.farid-editor/config.json` when running from source).
+- **Everything runs on your computer.** Your footage never leaves your machine, and export uses your GPU and is faster than real time.
+- **Bring your own AI.** Use your Claude subscription, an API key from Claude, ChatGPT, Gemini or OpenRouter, or a free local model with Ollama. Or use no AI at all: every editing tool works without it.
+- **One click to cut someone out.** Click a person or object and NomadMovie outlines it and follows it through the clip. The AI model for this runs locally.
+- **Free and open source** under the MIT license.
 
 ## Features
 
-**Editing.** Multi-track video and audio timeline, drag and drop, split (S), trim, ripple delete, snapping, markers, copy/paste/duplicate, unlimited undo, track lock/hide/mute, timeline zoom, autosave of projects and media, and save/open of project files.
+### Editing
+Multi-track video and audio timeline · drag and drop · split, trim, ripple delete · snapping and markers · copy, paste, duplicate · unlimited undo · lock, hide and mute tracks · autosave · project files · any video, audio or photo format (MP4, MOV, MKV, WebM, ProRes, HEVC, HEIC, RAW, PSD…).
 
-**Visuals and motion.** Text with 10 style presets, shapes and gradients, and keyframes for position, scale, rotation, opacity and blur with 8 easing curves. There are 14 in/out animation presets (typewriter, word-by-word, pop…), 15 transitions, 16 color looks plus manual color grading, and effects such as shake, glitch, RGB split, pixelate, mirror, film grain and letterbox. Also chroma key, blend modes, crop, speed ramps, and project sizes from 9:16 to 4K.
+### Motion graphics
+Text with style presets and 7 bundled fonts · shapes and gradients · keyframes for position, scale, rotation, opacity and blur with 8 easing curves · 14 in/out animation presets (typewriter, word by word, pop…) · zoom and pan moves · freeze frames · photo slideshows.
 
-**Masks and cut-outs.** Keep only part of a clip by drawing a box, an ellipse, a freehand outline or a point-by-point shape on the preview. You can drag the points, feather or expand the edge, invert the mask, and animate it with keys. On an effect layer, a mask limits the effect to that area, for example to blur one face. "Select a subject with AI" outlines a person or object from a click. It uses EdgeTAM, a fast SAM 2 model that runs locally on the GPU via WebGPU; the model (~40 MB) downloads on first use. "Track forward/back" follows the subject through the clip and keys the outline. "Crop to mask" crops the frame to the masked area.
+### Effects and color
+62 GPU effects (glow, glitch, VHS, film grain, light leaks, weather…) · 136 transitions · effect layers that apply to everything below them · 16 color looks plus manual grading · chroma key · blend modes.
 
-**Audio.** Volume with keyframes, fades, pan, 3-band EQ with presets, noise and hum reduction, voice enhancement, compressor, reverb and echo. You can record voice-overs, detach audio from video, remove silences automatically, normalize loudness, auto-duck music under speech, detect beats as markers, and watch a level meter.
+### Masks and cut-outs
+Draw a box, ellipse, freehand or point-by-point mask on the preview and keep only what's inside, or invert it. Feather and expand the edge, and animate the mask with keys. On an effect layer, a mask limits the effect to one area, for example to blur a face or brighten a sky.
 
-**AI (Claude).** A chat assistant edits the project from plain language: intros, lower thirds, kinetic text, color grading, cuts, audio mixing. It can also:
+**✨ Select a subject with AI:** click a person or object and it's outlined for you. **Track** follows it through the whole clip. This uses [EdgeTAM](https://huggingface.co/onnx-community/EdgeTAM-ONNX), a fast version of Meta's Segment Anything 2, running on your GPU. The ~40 MB model downloads once.
 
-- create SVG stickers and graphics
-- look at the current frame for color and composition
-- time a script to the speech for subtitles, with SRT export
-- detect scenes and cut on the beat
+### Audio
+Volume keyframes and fades · pan · 3-band EQ · noise and hum reduction · voice enhance · compressor, reverb, echo · voice-over recording · automatic silence removal · loudness normalization · auto-duck music under speech · beat detection.
 
-**Export.** MP4 (H.264), WebM, MOV, GIF, MP3 and WAV, with a choice of resolution and quality and an option to export only the selected range.
+### AI assistant
+Describe what you want, such as *"make a 5-second intro with my channel name"*, *"color grade this like a film"* or *"add subtitles"*, and the assistant edits your project. It can also design SVG stickers and graphics, look at the frame to fix color, time a script to the speech for subtitles (with SRT export), and cut on the beat or on scene changes.
 
-## Why export is faster than real time
+### Export
+MP4 (H.264), WebM, MOV, GIF, MP3 and WAV · choice of resolution and quality · export only a selected range. Frames are rendered and hardware-encoded directly instead of being played back, so an 8-second 1080p video exports in about 4 seconds even on a 2019 laptop.
 
-Export doesn't play the video back and record it. Instead:
+## Connect an AI
 
-1. Each frame is rendered directly.
-2. Source videos are decoded in order with WebCodecs, instead of seeking a `<video>` element for every frame (about 60 ms per frame).
-3. Frames are hardware-encoded to H.264.
-4. Audio is mixed offline.
-5. ffmpeg muxes video and audio by stream copy.
+Open **⚙ Settings → AI assistant** in the app and pick one. Use **Test connection** to check it before saving.
 
-An 8-second 1080p timeline exports in about 4 seconds on a 2019 Intel Mac. Clips made only of text and graphics export much faster than that. If WebCodecs isn't available, Farid Editor falls back to real-time capture.
+| Option | What you need | Cost |
+| --- | --- | --- |
+| **Claude subscription** | A Claude Pro or Max plan and [Claude Code](https://docs.claude.com/en/docs/claude-code) installed (`npm i -g @anthropic-ai/claude-code`, then run `claude` once to sign in) | Included in your plan |
+| **Claude API** | A key from [console.anthropic.com](https://console.anthropic.com/settings/keys) | Pay per use |
+| **ChatGPT / OpenAI** | A key from [platform.openai.com](https://platform.openai.com/api-keys) | Pay per use |
+| **Google Gemini** | A key from [Google AI Studio](https://aistudio.google.com/apikey) | Free tier available |
+| **OpenRouter** | A key from [openrouter.ai](https://openrouter.ai/keys), one key for hundreds of models | Pay per use, some free models |
+| **Local AI** | [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai) running on your computer | Free and fully private |
+| **Other service** | Any OpenAI-compatible address (Groq, Mistral, DeepSeek, Together, your own server…) | Depends on the service |
 
-## Project layout
+Keys are saved only on your computer, in a settings file readable only by your user account, and are sent only to the service you pick. The assistant works best with capable models; small local models can handle simple requests.
+
+## Install
+
+Download the installer for your system from the **[latest release](https://github.com/faridmasjedi/NomadMovie/releases/latest)**.
+
+- **macOS:** open the `.dmg` and drag NomadMovie into Applications. Use the `arm64` file for Apple Silicon (M1 and later) and `x64` for Intel Macs. If macOS says it can't check the app, right-click it in Applications and choose **Open**. You only need to do this once.
+- **Windows:** run the `setup.exe`. If SmartScreen appears, click **More info → Run anyway**.
+- **Linux:** use the `.AppImage` (make it executable and run it) or install the `.deb`.
+
+## Build from source
+
+You need [Node.js](https://nodejs.org) 22 or newer.
+
+```bash
+git clone https://github.com/faridmasjedi/NomadMovie.git
+cd NomadMovie
+npm install
+
+npm run dev        # run in the browser at http://localhost:5173, with hot reload
+npm run app        # build and open the desktop app
+npm run dist       # build an installer for your system into release/
+```
+
+Optional: automatic speech-to-text for subtitles needs [Whisper](https://github.com/openai/whisper) (`pip install openai-whisper`). Without it, paste a script and the AI times it to the speech.
+
+## Releasing a new version
+
+*(for maintainers)*
+
+1. Go to **Actions → Release → Run workflow** and enter the new version, for example `1.2.0`.
+   Or push a tag: `git tag v1.2.0 && git push origin v1.2.0`.
+2. The workflow builds macOS (Apple Silicon and Intel), Windows and Linux, and publishes a GitHub Release with the installers and release notes.
+
+Builds are unsigned until signing secrets are added. To sign and notarize, add these repository secrets:
+`MAC_CSC_LINK` and `MAC_CSC_KEY_PASSWORD` (your Developer ID certificate as a base64 .p12), `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`, and for Windows `WIN_CSC_LINK` and `WIN_CSC_KEY_PASSWORD`.
+
+## Contributing
+
+Contributions are welcome! `main` is protected: changes go through a pull request, must pass CI, and are reviewed by the maintainer before merging. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+## How it's built
+
+React, TypeScript and Vite for the interface, a Canvas/WebGL compositor for rendering, Web Audio for sound, WebCodecs for fast export, Electron for the desktop app, and a small local Express engine (bundled ffmpeg, AI calls).
 
 ```
-electron/main.ts         desktop shell (window, permissions, starts the local engine)
-server/index.ts          local engine: Express, ffmpeg (bundled), Whisper, settings
-server/ai.ts             Claude: subscription via Claude Code CLI, or the API with structured JSON output
-server/config.ts         settings and Claude Code discovery
-src/engine/render.ts     Canvas compositor (layers, filters, effects, chroma key, text, shapes)
-src/engine/animate.ts    keyframes, easing, animation presets and transitions
-src/engine/audio.ts      Web Audio engine (playback, effects, offline mixdown, WAV)
-src/engine/decoder.ts    sequential MP4/MOV decoding (mp4box + WebCodecs) for fast export
+electron/main.ts         desktop shell: window, permissions, starts the local engine
+server/index.ts          local engine: Express, ffmpeg, Whisper, settings
+server/ai.ts             AI providers: Claude (subscription or API) and OpenAI-compatible services
+server/config.ts         AI settings and Claude Code discovery
+src/engine/render.ts     compositor: layers, filters, effects, masks, chroma key, text, shapes
+src/engine/mask.ts       masks: outlines, interpolation between keys, feather and expand
+src/engine/animate.ts    keyframes, easing, animation presets
+src/engine/audio.ts      Web Audio engine: playback, effects, offline mixdown
 src/engine/exporter.ts   fast WebCodecs export, with real-time capture as fallback
-src/engine/analysis.ts   silence/speech, beat, scene and loudness analysis
-src/engine/mask.ts       masks: outlines, interpolation between keys, feather/expand, compositing
-src/ai/segment.ts        AI subject selection and tracking (EdgeTAM via transformers.js, local)
-src/ai/actions.ts        runs the edit operations that Claude returns
-src/components/          UI (timeline, preview, inspector, panels)
+src/engine/decoder.ts    sequential MP4/MOV decoding for fast export
+src/engine/analysis.ts   silence, speech, beat, scene and loudness analysis
+src/ai/actions.ts        runs the edits the AI assistant returns
+src/ai/segment.ts        AI subject selection and tracking (runs locally)
+src/components/          interface: timeline, preview, inspector, panels
 ```
 
-## Notes
+## License
 
-- Fast decoding works for MP4/MOV sources. Other formats (WebM, MKV) still export correctly but more slowly.
-- Automatic speech-to-text needs `pip install openai-whisper`. Without it, paste the script and the AI times it to the speech.
-- The macOS build is unsigned. It opens normally when built on your own Mac. On another Mac, right-click the app and choose Open the first time.
+[MIT](LICENSE) © Farid Masjedi
