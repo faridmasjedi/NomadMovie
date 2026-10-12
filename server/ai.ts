@@ -88,6 +88,7 @@ auto_duck {clipId} — lower this (music) clip's volume while other clips have s
 normalize {clipId} — loudness normalization
 beats_to_markers {clipId} — detect music beats and add markers (then you can't see them; tell the user to look at the timeline)
 detect_scenes {clipId, split?} — find scene cuts in a video clip (optionally split there)
+apply_preset {preset, clipIds} — apply one of the user's saved presets (names in catalog.myPresets) to clips; "my vlog look", "my preset" etc. refer to these
 
 ## Motion design guidance
 - When asked to "make an animation / intro / title / lower third / logo reveal", design a polished, layered composition: background (solid or gradient shape), decorative shapes, main text, and timed keyframes with eased motion (overshoot with backOut, staggered starts of ~0.1–0.25s, holds, exits). Typical intro is 4–8 seconds.
