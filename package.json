@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "ffmpeg-static": "^5.2.0"
   },
   "devDependencies": {
@@ -27,7 +27,7 @@
     "@fontsource/roboto-mono": "^5.3.0",
     "@fontsource/vazirmatn": "^5.3.0",
     "@huggingface/transformers": "^4.3.1",
-    "@types/express": "^4.17.21",
+    "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
