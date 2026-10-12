@@ -1,5 +1,6 @@
 import glTransitions from "gl-transitions/gl-transitions.json";
 import type { GLTransitionSource } from "./gl";
+import { EXTRA_TRANSITIONS, EXTRA_TRANSITION_SOURCES } from "./transitionsExtra";
 
 type Uniform = number | boolean | number[];
 
@@ -63,6 +64,7 @@ const CUSTOM: GLTransitionSource[] = [
   },
 ];
 for (const c of CUSTOM) byName.set(c.name, c as never);
+for (const c of EXTRA_TRANSITION_SOURCES) byName.set(c.name, c as never);
 
 /** [id, label, category, gl-transition name, params] */
 const TABLE: [string, string, string, string, Record<string, Uniform>?][] = [
@@ -216,7 +218,7 @@ const TABLE: [string, string, string, string, Record<string, Uniform>?][] = [
   ["bowTieParam", "Bow Tie", "Stylized", "BowTieWithParameter"],
 ];
 
-export const TRANSITION_DEFS: TransitionDef[] = TABLE.flatMap(([id, label, category, name, params]) => {
+export const TRANSITION_DEFS: TransitionDef[] = [...TABLE, ...EXTRA_TRANSITIONS].flatMap(([id, label, category, name, params]) => {
   const source = byName.get(name);
   return source ? [{ id, label, category, source, params }] : [];
 });

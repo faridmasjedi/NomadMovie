@@ -34,7 +34,7 @@ Multi-track video and audio timeline · drag and drop · split, trim, ripple del
 Text with style presets and 7 bundled fonts · shapes and gradients · keyframes for position, scale, rotation, opacity and blur with 8 easing curves · 14 in/out animation presets (typewriter, word by word, pop…) · zoom and pan moves · freeze frames · photo slideshows.
 
 ### Effects and color
-62 GPU effects (glow, glitch, VHS, film grain, light leaks, weather…) · 136 transitions · effect layers that apply to everything below them · 16 color looks plus manual grading · chroma key · blend modes.
+90 GPU effects (deep glow, anamorphic flares, film emulation, glitch, VHS, light leaks, weather…) · outlines, drop shadows and neon glows for cut-outs · 155 transitions · effect layers that apply to everything below them · 16 color looks plus manual grading · chroma key · blend modes.
 
 ### Masks and cut-outs
 Draw a box, ellipse, freehand or point-by-point mask on the preview and keep only what's inside, or invert it. Feather and expand the edge, and animate the mask with keys. On an effect layer, a mask limits the effect to one area, for example to blur a face or brighten a sky.
