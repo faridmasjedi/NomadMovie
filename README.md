@@ -12,7 +12,7 @@ and let an AI assistant do the tedious parts — with the AI you already use.
 [![Latest release](https://img.shields.io/github/v/release/faridmasjedi/NomadMovie?label=download)](https://github.com/faridmasjedi/NomadMovie/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**[⬇ Download for macOS, Windows or Linux](https://github.com/faridmasjedi/NomadMovie/releases/latest)**
+**[⬇ Download for macOS, Windows or Linux](https://github.com/faridmasjedi/NomadMovie/releases/latest)** · **[📖 Website and full guide](https://faridmasjedi.github.io/NomadMovie/)**
 
 ![NomadMovie](docs/screenshot.png)
 
@@ -26,6 +26,8 @@ and let an AI assistant do the tedious parts — with the AI you already use.
 - **Free and open source** under the MIT license.
 
 ## Features
+
+Every feature has a step-by-step guide with an animated demo on the **[NomadMovie website](https://faridmasjedi.github.io/NomadMovie/)**.
 
 ### Editing
 Multi-track video and audio timeline · drag and drop · split, trim, ripple delete · snapping and markers · copy, paste, duplicate · unlimited undo · lock, hide and mute tracks · autosave · project files · any video, audio or photo format (MP4, MOV, MKV, WebM, ProRes, HEVC, HEIC, RAW, PSD…).
