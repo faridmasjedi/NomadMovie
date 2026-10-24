@@ -10,6 +10,7 @@ import { aiAssist, aiSubtitles, aiAvailable, listModels, testProvider } from "./
 import { claudeStatus, dataDir, findClaude, getConfig, modelFor, PROVIDERS, saveConfig, urlFor, type Config, type Provider } from "./config.ts";
 import { registerImport, SAFE_INPUT } from "./importer.ts";
 import { cancelSetup, installClaude, setupState, startLogin, submitCode } from "./claudeSetup.ts";
+import { removeQuietly } from "./cleanup.ts";
 
 const has = (bin: string, arg = "-version") => {
   try {
@@ -281,9 +282,9 @@ export function createApp(opts: { staticDir?: string; token?: string } = {}) {
     try {
       await run(FFMPEG, ["-y", ...inputs, ...maps, ...fmt.args({ fps, quality, copy }), ...(dur > 0 ? ["-t", dur.toFixed(3)] : []), output]);
       res.setHeader("Content-Type", fmt.mime);
-      res.sendFile(output, () => fs.rmSync(dir, { recursive: true, force: true }));
+      res.sendFile(output, () => removeQuietly(dir));
     } catch (e) {
-      fs.rmSync(dir, { recursive: true, force: true });
+      removeQuietly(dir);
       res.status(500).json({ error: errMsg(e) });
     }
   });
@@ -302,7 +303,7 @@ export function createApp(opts: { staticDir?: string; token?: string } = {}) {
         fs.renameSync(tmp, target);
         res.json({ ok: true, path: target });
       } catch (e) {
-        fs.rmSync(tmp, { force: true });
+        removeQuietly(tmp);
         res.status(500).json({ error: `Could not save the file: ${errMsg(e)}` });
       }
     });
@@ -326,7 +327,7 @@ export function createApp(opts: { staticDir?: string; token?: string } = {}) {
     } catch (e) {
       res.status(500).json({ error: errMsg(e) });
     } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
+      removeQuietly(dir);
     }
   });
 

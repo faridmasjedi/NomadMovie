@@ -8,6 +8,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import type { Request, Response, Express } from "express";
+import { removeQuietly } from "./cleanup.ts";
 
 interface Probe {
   duration: number;
@@ -155,7 +156,7 @@ async function convert(job: Job, ffmpeg: string | null, input: string, name: str
 setInterval(() => {
   for (const [id, j] of jobs) {
     if (Date.now() - j.createdAt > 60 * 60_000) {
-      fs.rmSync(j.dir, { recursive: true, force: true });
+      removeQuietly(j.dir);
       jobs.delete(id);
     }
   }
@@ -186,7 +187,7 @@ export function registerImport(app: Express, ffmpeg: string | null, opts: { allo
     res.json({ id: job.id });
     // only our own upload copy is removed, never the user's file
     const cleanup = () => {
-      if (!src) fs.rmSync(input, { force: true });
+      if (!src) removeQuietly(input);
     };
     convert(job, ffmpeg, input, name, req.query.force === "1")
       .then(() => {
@@ -211,7 +212,7 @@ export function registerImport(app: Express, ffmpeg: string | null, opts: { allo
     const j = jobs.get(req.params.id);
     if (!j?.output || j.status !== "done") return void res.status(404).json({ error: "not ready" });
     res.sendFile(j.output, () => {
-      fs.rmSync(j.dir, { recursive: true, force: true });
+      removeQuietly(j.dir);
       jobs.delete(j.id);
     });
   });

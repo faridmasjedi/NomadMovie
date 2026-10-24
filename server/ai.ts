@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { claudeEnv, findClaude, getConfig, keyFor, modelFor, PROVIDERS, urlFor, type Provider } from "./config.ts";
+import { removeQuietly } from "./cleanup.ts";
 
 /** which provider / key / model a request goes to (the saved settings, or values being tested) */
 interface Target {
@@ -347,7 +348,7 @@ async function callClaudeCode(system: string, turns: Turn[], schema: object, eff
     if (res.structured_output) return res.structured_output;
     return JSON.parse(res.result ?? "{}");
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    removeQuietly(dir);
   }
 }
 
