@@ -1,7 +1,7 @@
 {
   "name": "nomadmovie",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
