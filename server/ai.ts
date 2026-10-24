@@ -251,7 +251,7 @@ async function callOpenAICompatible(system: string, turns: Turn[], schema: objec
 /** the models a provider offers (for the model picker in Settings) */
 export async function listModels(o: { provider: Provider; key?: string; url?: string }): Promise<string[]> {
   const p = o.provider;
-  const key = o.key || keyFor(p), url = (o.url || urlFor(p)).replace(/\/+$/, "");
+  const key = o.key ?? keyFor(p), url = (o.url || urlFor(p)).replace(/\/+$/, "");
   if (p === "claude-code") return ["default", "opus", "sonnet", "haiku"];
   if (p === "anthropic") {
     const page = await anthropic(key).models.list({ limit: 100 });
@@ -271,7 +271,7 @@ export async function testProvider(o: { provider: Provider; key?: string; model?
   const p = o.provider;
   const t: Target = {
     provider: p,
-    key: o.key || keyFor(p),
+    key: o.key ?? keyFor(p),
     model: o.model || modelFor(p),
     url: (o.url || urlFor(p)).replace(/\/+$/, ""),
   };

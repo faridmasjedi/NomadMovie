@@ -70,14 +70,20 @@ function run(bin: string, args: string[], onStderr?: (chunk: string) => void) {
 async function probe(ffmpeg: string, file: string) {
   // `ffmpeg -i` without an output exits with an error but prints the stream info we need
   const out = await new Promise<string>((resolve) => {
-    const proc = spawn(ffmpeg, ["-hide_banner", "-i", file], { stdio: ["ignore", "ignore", "pipe"] });
+    const proc = spawn(ffmpeg, ["-hide_banner", ...SAFE_INPUT, "-i", file], { stdio: ["ignore", "ignore", "pipe"] });
     let s = "";
     proc.stderr.on("data", (d) => (s += d));
     proc.on("close", () => resolve(s));
     proc.on("error", () => resolve(s));
   });
+  if (LINKING_FORMATS.test(out)) throw new Error("Playlists and file lists can't be imported — import the media files themselves");
   return parseProbe(out);
 }
+
+/** input options for files we didn't create: local files only, no network or other protocols */
+export const SAFE_INPUT = ["-protocol_whitelist", "file,pipe"];
+/** container formats that point at other files or URLs (playlists, concat lists) — never followed */
+const LINKING_FORMATS = /^Input #0, (hls|dash|concat|ffconcat|webm_dash_manifest|tee|sdp|rtsp|rtp)\b/m;
 
 /** codecs the editor can play from an MP4 container without re-encoding */
 const COPY_VIDEO = new Set(["h264", "hevc", "vp9", "av1"]);
@@ -101,7 +107,7 @@ async function convert(job: Job, ffmpeg: string | null, input: string, name: str
       await run("/usr/bin/sips", ["-s", "format", fmt, ...(fmt === "jpeg" ? ["-s", "formatOptions", "92"] : []), input, "--out", out]);
     } catch {
       if (!ffmpeg) throw new Error("Cannot convert this image");
-      await run(ffmpeg, ["-y", "-i", input, "-frames:v", "1", ...(fmt === "jpeg" ? ["-q:v", "2"] : []), out]);
+      await run(ffmpeg, ["-y", ...SAFE_INPUT, "-i", input, "-frames:v", "1", ...(fmt === "jpeg" ? ["-q:v", "2"] : []), out]);
     }
     Object.assign(job, { output: out, outName: path.basename(out), kind: "image" as const });
     return;
@@ -114,7 +120,7 @@ async function convert(job: Job, ffmpeg: string | null, input: string, name: str
 
   if (info.video?.isImage && !info.audio) {
     const out = path.join(job.dir, `${base}.png`);
-    await run(ffmpeg, ["-y", "-i", input, "-frames:v", "1", out]);
+    await run(ffmpeg, ["-y", ...SAFE_INPUT, "-i", input, "-frames:v", "1", out]);
     Object.assign(job, { output: out, outName: path.basename(out), kind: "image" as const });
     return;
   }
@@ -123,7 +129,7 @@ async function convert(job: Job, ffmpeg: string | null, input: string, name: str
     // audio only → FLAC (lossless, decodes everywhere)
     const out = path.join(job.dir, `${base}.flac`);
     job.stage = "Converting audio";
-    await run(ffmpeg, ["-y", "-i", input, "-map", "0:a:0", "-vn", "-c:a", "flac", "-sample_fmt", "s16", out], progressFrom(info.duration));
+    await run(ffmpeg, ["-y", ...SAFE_INPUT, "-i", input, "-map", "0:a:0", "-vn", "-c:a", "flac", "-sample_fmt", "s16", out], progressFrom(info.duration));
     Object.assign(job, { output: out, outName: path.basename(out), kind: "audio" as const, hasAudio: true });
     return;
   }
@@ -133,7 +139,7 @@ async function convert(job: Job, ffmpeg: string | null, input: string, name: str
   job.stage = copyV ? "Repackaging (no quality loss)" : `Converting ${info.video.codec.toUpperCase()} video`;
   const out = path.join(job.dir, `${base}.mp4`);
   await run(ffmpeg, [
-    "-y", "-i", input,
+    "-y", ...SAFE_INPUT, "-i", input,
     "-map", "0:v:0", "-map", "0:a:0?",
     ...(copyV
       ? ["-c:v", "copy", ...(info.video.codec === "hevc" ? ["-tag:v", "hvc1"] : [])]

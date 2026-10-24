@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
 import { aiAssist, aiSubtitles, aiAvailable, listModels, testProvider } from "./ai.ts";
 import { claudeStatus, dataDir, findClaude, getConfig, modelFor, PROVIDERS, saveConfig, urlFor, type Config, type Provider } from "./config.ts";
-import { registerImport } from "./importer.ts";
+import { registerImport, SAFE_INPUT } from "./importer.ts";
 import { cancelSetup, installClaude, setupState, startLogin, submitCode } from "./claudeSetup.ts";
 
 const has = (bin: string, arg = "-version") => {
@@ -84,8 +84,29 @@ const FORMATS: Record<string, FormatSpec> = {
   wav: { ext: "wav", mime: "audio/wav", args: () => ["-vn", "-c:a", "pcm_s16le"] },
 };
 
+/**
+ * The engine only serves the editor itself. Web pages open in the user's browser can also reach
+ * 127.0.0.1, so requests from other sites (Origin / Sec-Fetch-Site) and other host names (DNS rebinding)
+ * are refused, and the editor can't be framed by another page.
+ */
+function localOnly(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const host = req.headers.host ?? "";
+  if (!/^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(host)) return void res.status(403).send("Forbidden host");
+  const origin = req.headers.origin;
+  const site = req.headers["sec-fetch-site"];
+  if ((origin && origin !== `http://${host}`) || (site && site !== "same-origin" && site !== "none")) {
+    return void res.status(403).json({ error: "Cross-site requests are not allowed" });
+  }
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  next();
+}
+
 export function createApp(opts: { staticDir?: string } = {}) {
   const app = express();
+  app.disable("x-powered-by");
+  app.use(localOnly);
   app.use("/api/ai", express.json({ limit: "25mb" }));
   app.use("/api/settings", express.json());
   app.use("/api/presets", express.json({ limit: "20mb" }));
@@ -165,12 +186,13 @@ export function createApp(opts: { staticDir?: string } = {}) {
   });
 
   /** values from the Settings form: a masked key means "the saved one" */
-  const formTarget = (b: SettingsBody) => ({
-    provider: b.provider as Provider,
-    key: b.key && !b.key.includes("…") ? b.key.trim() : undefined,
-    model: b.model?.trim() || undefined,
-    url: b.url?.trim() || undefined,
-  });
+  const formTarget = (b: SettingsBody) => {
+    const p = b.provider as Provider;
+    // only local / custom services take an address; a saved key is only sent to the address it was saved for
+    const url = (p === "ollama" || p === "custom") && b.url?.trim() ? b.url.trim().replace(/\/+$/, "") : undefined;
+    const typed = b.key && !b.key.includes("…") ? b.key.trim() : undefined;
+    return { provider: p, key: typed ?? (url && url !== urlFor(p) ? "" : undefined), model: b.model?.trim() || undefined, url };
+  };
 
   app.post("/api/settings/models", async (req, res) => {
     const b = req.body as SettingsBody;
@@ -246,11 +268,11 @@ export function createApp(opts: { staticDir?: string } = {}) {
     const audio = path.join(dir, "audio.wav");
     const output = path.join(dir, `output.${fmt.ext}`);
     fs.writeFileSync(video, body.subarray(0, vlen));
-    const inputs = ["-i", video];
+    const inputs = [...SAFE_INPUT, "-i", video];
     const maps: string[] = [];
     if (vlen < body.length) {
       fs.writeFileSync(audio, body.subarray(vlen));
-      inputs.push("-i", audio);
+      inputs.push(...SAFE_INPUT, "-i", audio);
       maps.push("-map", "0:v:0", "-map", "1:a:0");
     }
     try {
@@ -274,6 +296,7 @@ export function createApp(opts: { staticDir?: string } = {}) {
     try {
       const lang = String(req.query.lang ?? "");
       const model = String(req.query.model ?? "small");
+      if (!/^[a-z0-9.-]{1,32}$/i.test(model)) throw new Error("unknown whisper model");
       await run("whisper", [input, "--model", model, "--output_format", "json", "--output_dir", dir, ...(lang ? ["--language", lang] : [])]);
       const out = JSON.parse(fs.readFileSync(path.join(dir, "audio.json"), "utf8"));
       res.json({
