@@ -98,3 +98,14 @@ jobs:
 
             **First launch on macOS:** if macOS says it can't check the app for malicious software, right-click NomadMovie in Applications → **Open** → **Open**. (Only needed once, and only for builds that aren't notarized by Apple.)
             **Windows:** if SmartScreen appears, click **More info → Run anyway**.
+
+  website:
+    name: Update the website
+    needs: [prepare, publish]
+    permissions:
+      contents: write
+      pages: write
+    uses: ./.github/workflows/website.yml
+    with:
+      ref: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit
