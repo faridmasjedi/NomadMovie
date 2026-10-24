@@ -117,7 +117,9 @@
     <li><b>AppImage</b> (any distribution): make it executable (<code>chmod +x NomadMovie-*.AppImage</code>) and run it. Some distributions need <code>libfuse2</code>.</li>
     <li><b>Debian / Ubuntu</b>: <code>sudo apt install ./NomadMovie-*.deb</code>.</li>
   </ol>
-  <div class="info"><b>What's inside.</b> The app includes everything it needs: the editor, the local engine, ffmpeg for converting and exporting, and the fonts. AI features are optional; see <a href="#ai-setup">Connect an AI</a>.</div>
+  <div class="info"><b>What's inside.</b> The app includes everything it needs: the editor, its engine, ffmpeg for converting and exporting, and the fonts. AI features are optional; see <a href="#ai-setup">Connect an AI</a>.</div>
+  <h3>Updates</h3>
+  <p>The app tells you when a new version is out. On Windows (installer) and Linux (AppImage) it installs it for you when you restart. On macOS, click <b>Download</b> in the notice and install the new version over the old one; your projects stay.</p>
   <h3>System requirements</h3>
   <div class="table-wrap"><table>
     <tr><th></th><th>Minimum</th><th>Recommended</th></tr>
@@ -135,7 +137,7 @@
   <p class="lead">Four areas: the library on the left, the preview in the middle, the Inspector on the right and the timeline at the bottom.</p>
   <figure class="demo" data-gif="editing" data-caption="The main window: panels on the left, preview, Inspector and timeline."></figure>
   <div class="cols">
-    <div class="box"><h4>Top bar</h4><ul><li>Project name and <b>project size</b> (16:9, 9:16, 1:1, 4:5, 21:9, 4K…)</li><li>Undo / redo</li><li>Status: <b>AI</b>, <b>ffmpeg</b>, <b>Whisper</b> (green = ready). Click AI to set it up.</li><li><b>New</b>, <b>Open</b> and <b>Save</b> project files</li><li><b>Export</b> and <b>⚙ Settings</b></li></ul></div>
+    <div class="box"><h4>Top bar</h4><ul><li>Project name and <b>project size</b> (16:9, 9:16, 1:1, 4:5, 21:9, 4K…)</li><li>Undo / redo</li><li><b>New</b>, <b>Open</b> and <b>Save</b> project files</li><li><b>Export</b> and <b>⚙ Settings</b></li><li>The AI chip shows which AI is connected; click it to change.</li></ul></div>
     <div class="box"><h4>Left panel</h4><ul><li><b>Media</b>: import and your library</li><li><b>Text</b>: title styles</li><li><b>Elements</b>: shapes, colors, gradients</li><li><b>Effects</b> and <b>Transitions</b> browsers</li><li><b>Audio</b>: voice-over recording</li><li><b>AI</b>: assistant and smart tools</li></ul></div>
     <div class="box"><h4>Preview</h4><ul><li>Click a layer to select it; drag to move</li><li>Corner handle: resize. Side handles: stretch. Top handle: rotate.</li><li>Transport: start, frame back, play, frame forward, end, loop</li><li>Audio meter, master volume, preview quality, save frame as PNG, fullscreen</li></ul></div>
     <div class="box"><h4>Inspector</h4><ul><li>Shows the selected clip's settings in tabs: <b>Basic</b>, <b>Animation</b>, <b>Color</b>, <b>Effects</b>, <b>Audio</b>, <b>Speed</b></li><li>With nothing selected: project settings and keyboard shortcuts</li><li>At the top: <b>★ My presets</b> and <b>Save as preset</b></li></ul></div>
@@ -288,7 +290,6 @@
   <p>Pick an <b>In animation</b> and an <b>Out animation</b>, each with its own duration:</p>
   <div class="chips"><span class="chip">Fade</span><span class="chip">Slide up / down / left / right</span><span class="chip">Pop</span><span class="chip">Zoom</span><span class="chip">Bounce</span><span class="chip">Rotation</span><span class="chip">Typewriter</span><span class="chip">Word by word</span><span class="chip">Blur</span><span class="chip">Elastic</span></div>
   <p>You can also drag an animation from the <b>Transitions</b> panel onto a clip: the left half sets the In animation, the right half the Out animation.</p>
-  <div class="tip"><b>Tip.</b> When you add a title, the playhead is on its first frame, where an In animation hasn't started yet. Move the playhead a little to see it while you edit.</div>
 </section>
 
 <section class="page" id="elements" data-group="Create" data-title="Shapes & backgrounds" data-icon="◆">
@@ -692,11 +693,13 @@
     <tr><td>Format</td><td>MP4 (H.264), WebM (VP9), MOV, Animated GIF, MP3 (audio only), WAV (audio only)</td></tr>
     <tr><td>Resolution</td><td>2× (for example 3840×2160), original, ⅔ or ½ of the project size</td></tr>
     <tr><td>Quality</td><td>High, Medium, Small file</td></tr>
+    <tr><td>Save to</td><td>Where the file is written; <b>Change…</b> opens the save dialog</td></tr>
     <tr><td>Range</td><td>Whole project, or only the selected clips</td></tr>
   </table></div>
   <h3>Why it's fast</h3>
   <p>NomadMovie doesn't play the video back to record it. It decodes the source clips frame by frame, renders each frame on the GPU, encodes it with your computer's hardware video encoder, and mixes the audio separately. An 8-second 1080p video with music takes about 3 seconds on a 2019 Intel laptop. If hardware encoding isn't available, it falls back to real-time recording.</p>
-  <p>The desktop app asks where to save the file, starting in your Videos folder.</p>
+  <h3>Where it's saved</h3>
+  <p><b>Save to</b> shows where the file goes: your Movies folder (Videos on Windows) by default. Click <b>Change…</b> to pick another folder or name. When it's done, click <b>Show in Finder</b> (<b>Show in folder</b> on Windows) in the notice.</p>
 </section>
 
 <section class="page" id="projects" data-group="Finish" data-title="Projects & saving" data-icon="💾">
@@ -748,14 +751,14 @@
   <h2>Privacy and security</h2>
   <h3>Your data</h3>
   <ul>
-    <li>Your media and projects stay on your computer. The app's engine only listens on your own machine (<code>127.0.0.1</code>).</li>
+    <li>Your media and projects stay on your computer. The app's engine doesn't listen on the network at all.</li>
     <li>When you use the AI assistant, a description of your project (and the current frame, if you turn on <b>Send frame</b>) goes to the AI service you chose. Nothing is sent with a local model.</li>
     <li>AI cut-outs run entirely on your computer. Only the model is downloaded, once, from Hugging Face.</li>
     <li>No analytics, no tracking, no account.</li>
   </ul>
   <h3>How the app protects you</h3>
   <ul>
-    <li><b>The engine only answers the app.</b> Other websites open in your browser can't use it: requests from other sites and other host names are refused.</li>
+    <li><b>No network port.</b> The editor window talks to its engine through the app itself, over a private channel protected by a random key. No website or other program can reach it.</li>
     <li><b>Safe import.</b> Files are read as local media only. Playlists or file lists that point to other files or web addresses are refused.</li>
     <li><b>No code in files.</b> Lottie animations play without expressions, and SVG graphics are drawn as images, so scripts inside them never run.</li>
     <li><b>Keys stay put.</b> API keys are saved in a file only your user account can read, and are only sent to the service they belong to.</li>
@@ -782,8 +785,8 @@
   <p>It's fastest on a GPU with WebGPU. On older computers, track <b>every 3rd</b> or <b>5th frame</b> instead of every frame. The outline is interpolated in between.</p>
   <h3>Playback stutters</h3>
   <p>Lower the <b>preview quality</b> (menu next to the volume in the preview). This doesn't affect the export.</p>
-  <h3>“Could not start the local engine on port 47821”</h3>
-  <p>Another copy of NomadMovie (or another program) is using that port. Quit other copies and start it again.</p>
+  <h3>How do I update?</h3>
+  <p>NomadMovie checks for new versions by itself. With the Windows installer or the Linux AppImage, it downloads the update and shows <b>Restart to update</b>. On macOS (and with the zips or the .deb) it shows a <b>Download</b> button that brings you to this site; install the new version over the old one. Your projects stay.</p>
   <h3>Does it work offline?</h3>
   <p>Yes. Everything except the online AI services works offline, including fonts and export. The AI cut-out model needs internet once to download.</p>
   <h3>Is it really free?</h3>
@@ -804,7 +807,7 @@ npm run dev        # run in the browser at http://localhost:5173, with hot reloa
 npm run app        # build and open the desktop app
 npm run dist       # build an installer for your system into release/</code></pre>
   <h3>How it's built</h3>
-  <p>React, TypeScript and Vite for the interface; a Canvas and WebGL compositor for rendering; Web Audio for sound; WebCodecs for fast export; Electron for the desktop app; and a small local Express engine with a bundled ffmpeg for conversion, export and AI calls.</p>
+  <p>React, TypeScript and Vite for the interface; a Canvas and WebGL compositor for rendering; Web Audio for sound; WebCodecs for fast export; Electron for the desktop app; and an engine with a bundled ffmpeg for conversion, export and AI calls. In the desktop app the window reaches the engine through Electron and a private socket, so nothing listens on the network.</p>
   <h3>Contributing</h3>
   <p>Contributions are welcome. Changes go through a pull request, must pass CI and are reviewed before merging. See <a href="https://github.com/faridmasjedi/NomadMovie/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
   <h3>Credits</h3>
