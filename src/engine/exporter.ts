@@ -43,7 +43,8 @@ async function convert(parts: Blob[], q: { format: string; fps: number; quality:
     body: new Blob(parts),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "ffmpeg conversion failed");
-  return res.blob();
+  // read into memory first: Chrome keeps large response blobs on disk and fails them when disk space is low
+  return new Blob([await res.arrayBuffer()], { type: res.headers.get("Content-Type") ?? "application/octet-stream" });
 }
 
 export async function exportProject(p: Project, media: Record<string, MediaItem>, o: ExportOptions): Promise<Blob> {
