@@ -106,7 +106,8 @@ async function convertOnEngine(file: Blob, name: string, force: boolean, onProgr
     if (st.status === "done") {
       const out = await fetch(`/api/import/${id}/file`);
       const ext = String(st.name).split(".").pop()!.toLowerCase();
-      const blob = new Blob([await out.blob()], { type: MIME[ext] ?? "application/octet-stream" });
+      // arrayBuffer, not blob(): large response blobs fail in Chrome when disk space is low
+      const blob = new Blob([await out.arrayBuffer()], { type: MIME[ext] ?? "application/octet-stream" });
       return { blob, name: st.name as string, kind: st.kind as MediaItem["kind"], hasAudio: !!st.hasAudio };
     }
   }
