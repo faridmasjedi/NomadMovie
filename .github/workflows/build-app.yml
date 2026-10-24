@@ -112,25 +112,23 @@ jobs:
         env:
           APP: ${{ matrix.smoke }}
         run: |
-          # the app gets a native path; this shell checks the same file through its own path form (Windows: D:\… → /d/…)
-          out="$RUNNER_TEMP/smoke.json"
-          check="$out"; log="$RUNNER_TEMP/smoke.log"
-          if [ "$RUNNER_OS" = Windows ]; then check="$(cygpath -u "$out")"; log="$(cygpath -u "$log")"; fi
-          rm -f "$check"
+          # The app writes its progress to the result file (stage: started → engine running → window open → final)
+          # and quits by itself after 150 s at most. We wait for a final result rather than for the process.
+          out="$RUNNER_TEMP/smoke.json"; log="$RUNNER_TEMP/smoke.log"; err="$RUNNER_TEMP/smoke.err"
+          rm -f "$out" "$log" "$err"
           export ELECTRON_ENABLE_LOGGING=1
-          # CI machines have no GPU: allow software WebGL. The app writes its result and quits by itself
-          # (after 150 s at most); we wait for the result file rather than for the process.
+          # CI machines have no GPU: allow software WebGL
           case "$RUNNER_OS" in
-            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" >"$log" 2>&1 & ;;
-            Windows) "$APP" --enable-unsafe-swiftshader --smoke-test="$out" >"$log" 2>&1 & ;;
-            *) "$APP" --smoke-test="$out" >"$log" 2>&1 & ;;
+            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" >"$log" 2>"$err" & ;;
+            Windows)
+              # started through PowerShell so the app's output is captured (Git Bash can't capture it from a GUI app)
+              pwsh -NoProfile -Command "Start-Process -FilePath (Resolve-Path '$APP') -ArgumentList '--enable-unsafe-swiftshader','--smoke-test=$out' -RedirectStandardOutput '$log' -RedirectStandardError '$err'" ;;
+            *) "$APP" --smoke-test="$out" >"$log" 2>"$err" & ;;
           esac
-          for i in $(seq 1 240); do [ -s "$check" ] && break; sleep 1; done
-          sleep 2
-          kill $! 2>/dev/null || true
-          echo "--- app log (last lines) ---"; tail -n 40 "$log" 2>/dev/null || true
-          if [ ! -s "$check" ]; then echo "::error::The app wrote no result within 4 minutes"; exit 1; fi
-          echo "--- result ---"; cat "$check"
+          final() { node -e "try { process.exit(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).final ? 0 : 1) } catch { process.exit(1) }" "$out"; }
+          for i in $(seq 1 240); do final && break; sleep 1; done
+          show() { node -e "const fs = require('fs'); for (const f of process.argv.slice(1)) { console.log('--- ' + f + ' ---'); try { console.log(fs.readFileSync(f, 'utf8').split('\\n').slice(-40).join('\\n')) } catch { console.log('(none)') } }" "$@"; }
+          show "$log" "$err" "$out"
           node -e "process.exit(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).ok ? 0 : 1)" "$out"
       - uses: actions/upload-artifact@v4
         with:

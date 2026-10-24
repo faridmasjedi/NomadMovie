@@ -14,11 +14,26 @@ const ORIGIN = "http://127.0.0.1:47821";
 // `--smoke-test=<file>`: start with a throwaway profile, check that everything works, write the result, quit (used by CI)
 const smokeArg = process.argv.find((a) => a.startsWith("--smoke-test"));
 const smokeOut = smokeArg ? smokeArg.split("=")[1] || path.join(os.tmpdir(), "nomadmovie-smoke.json") : null;
+/** self-test: the result file always shows how far start-up got, so a failure in CI can be read */
+const smokeStage = (stage: string, extra: Record<string, unknown> = {}) => {
+  if (smokeOut) fs.writeFileSync(smokeOut, JSON.stringify({ ok: false, final: false, stage, ...extra }, null, 2));
+};
 if (smokeOut) {
+  smokeStage("started");
+  process.on("uncaughtException", (e) => {
+    smokeStage("crashed", { error: e?.stack ?? String(e) });
+    app.exit(1);
+  });
   app.setPath("userData", fs.mkdtempSync(path.join(os.tmpdir(), "nomadmovie-smoke-")));
   // never hang a CI job, whatever goes wrong
   setTimeout(() => {
-    fs.writeFileSync(smokeOut, JSON.stringify({ ok: false, error: "timed out" }));
+    let last = {};
+    try {
+      last = JSON.parse(fs.readFileSync(smokeOut, "utf8"));
+    } catch {
+      /* nothing written */
+    }
+    fs.writeFileSync(smokeOut, JSON.stringify({ ...last, ok: false, final: true, error: "timed out" }, null, 2));
     app.exit(2);
   }, 150_000).unref();
 }
@@ -153,13 +168,14 @@ app.whenReady().then(async () => {
   } catch (e) {
     const msg = `Could not start NomadMovie's engine.\n\n${e instanceof Error ? e.message : e}`;
     if (smokeOut) {
-      fs.writeFileSync(smokeOut, JSON.stringify({ ok: false, error: msg }));
+      fs.writeFileSync(smokeOut, JSON.stringify({ ok: false, final: true, error: msg }));
       return void app.exit(1);
     }
     dialog.showErrorBox("NomadMovie", msg);
     app.quit();
     return;
   }
+  smokeStage("engine running");
   app.on("will-quit", () => process.platform !== "win32" && fs.rmSync(socket, { force: true }));
   serveEditor(ORIGIN, socket, token);
 
@@ -174,7 +190,9 @@ app.whenReady().then(async () => {
   );
 
   watchForUpdates(() => win, ORIGIN, { check: !smokeOut });
+  smokeStage("opening window");
   await createWindow();
+  smokeStage("window open");
   if (smokeOut) return void smokeTest(smokeOut);
   app.on("activate", () => {
     if (!BrowserWindow.getAllWindows().length) createWindow();
@@ -206,6 +224,7 @@ async function smokeTest(out: string) {
     result.error = e instanceof Error ? e.message : String(e);
   }
   result.ok = ok;
+  result.final = true;
   fs.writeFileSync(out, JSON.stringify(result, null, 2));
   app.exit(ok ? 0 : 1);
 }
