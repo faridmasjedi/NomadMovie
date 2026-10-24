@@ -1,0 +1,53 @@
+name: Website
+
+# Publishes the guide at https://faridmasjedi.github.io/NomadMovie/ from the website/ folder.
+#   • Runs automatically at the end of every Release, so the guide matches the version people download.
+#   • Run it by hand (Actions → Website → Run workflow) to publish a documentation fix without a release.
+# The site is served from the gh-pages branch. Only the files in website/ are replaced there: the demo GIFs and
+# catalog animations (media/, catalog/) live only on gh-pages, so this repository stays small.
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: website
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          path: source
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+      - name: Update the site files
+        run: |
+          rsync -a --delete --exclude .git --exclude media/ --exclude catalog/ source/website/ site/
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The website is already up to date."
+            exit 0
+          fi
+          git commit -m "Website from ${{ inputs.ref || github.ref_name }}"
+          git push
+      - name: Rebuild GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" --silent || echo "::warning::Could not request a Pages build; GitHub will build on its own."

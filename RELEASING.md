@@ -18,7 +18,9 @@ them good for testing but not for sharing with users. Use a release for that.
    - Windows: `setup.exe` installer and a portable `.zip`
    - Linux: `.AppImage`, `.deb` and `.zip`
    - release notes generated from the merged pull requests
-3. Versions with a suffix (`1.3.0-beta.1`) are marked as pre-releases.
+3. When the release is published, the workflow also publishes the guide from `website/` to
+   <https://faridmasjedi.github.io/NomadMovie/> (see **Website** below).
+4. Versions with a suffix (`1.3.0-beta.1`) are marked as pre-releases.
 
 Anyone can download release files without a GitHub account, from
 <https://github.com/faridmasjedi/NomadMovie/releases/latest>.
@@ -37,3 +39,14 @@ automatically:
 | `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` | Windows code-signing certificate (.pfx, base64) and its password |
 
 Secret values are encrypted by GitHub and never shown in logs or to people who open pull requests.
+
+## Website
+
+The guide at <https://faridmasjedi.github.io/NomadMovie/> is built from the `website/` folder and served from the
+`gh-pages` branch.
+
+- **Every release** publishes it automatically, so the guide matches the version people download.
+- **A documentation fix without a release:** Actions → **Website** → Run workflow.
+- The download buttons don't need either: the site reads the latest release from GitHub when a visitor opens it.
+- The demo GIFs (`media/`) and the effect/transition animations (`catalog/`) live only on the `gh-pages` branch,
+  to keep this repository small. To change one, commit it to `gh-pages` directly.
