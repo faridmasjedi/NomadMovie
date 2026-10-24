@@ -107,19 +107,26 @@ jobs:
       # start the packaged app and check that the editor, engine, ffmpeg, graphics and storage work (see smokeTest in electron/main.ts)
       - name: Test the packaged app
         if: matrix.smoke
+        timeout-minutes: 6
         shell: bash
         env:
           APP: ${{ matrix.smoke }}
         run: |
           out="$RUNNER_TEMP/smoke.json"
-          # CI machines have no GPU: allow software WebGL
+          rm -f "$out"
+          # CI machines have no GPU: allow software WebGL. The app writes its result and quits by itself
+          # (after 150 s at most); we wait for the result file rather than for the process.
           case "$RUNNER_OS" in
-            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" || code=$? ;;
-            Windows) pwsh -NoProfile -Command "\$p = Start-Process -FilePath '$APP' -ArgumentList '--enable-unsafe-swiftshader','--smoke-test=$out' -Wait -PassThru; exit \$p.ExitCode" || code=$? ;;
-            *) "$APP" --smoke-test="$out" || code=$? ;;
+            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" & ;;
+            Windows) "$APP" --enable-unsafe-swiftshader --smoke-test="$out" & ;;
+            *) "$APP" --smoke-test="$out" & ;;
           esac
-          cat "$out" || echo "no result written"
-          exit ${code:-0}
+          for i in $(seq 1 240); do [ -s "$out" ] && break; sleep 1; done
+          sleep 2
+          kill $! 2>/dev/null || true
+          if [ ! -s "$out" ]; then echo "::error::The app wrote no result within 4 minutes"; exit 1; fi
+          cat "$out"
+          node -e "process.exit(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).ok ? 0 : 1)" "$out"
       - uses: actions/upload-artifact@v4
         with:
           name: NomadMovie-${{ matrix.slug }}

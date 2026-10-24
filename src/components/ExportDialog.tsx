@@ -1,10 +1,17 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../store";
 import { projectDuration } from "../factory";
 import { download, exportProject, type ExportFormat } from "../engine/exporter";
 import { pause } from "../engine/playback";
 import { getHealth } from "../health";
 import { Field, Select } from "./ui";
+import { desktop } from "../desktop";
+
+/** writes the finished export to the location chosen in the desktop app's save dialog */
+async function saveTo(file: string, blob: Blob) {
+  const res = await fetch(`/api/save?path=${encodeURIComponent(file)}`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: blob });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Could not save the file");
+}
 
 export function ExportDialog({ onClose }: { onClose: () => void }) {
   const p = useStore((s) => s.project);
@@ -16,8 +23,28 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   const [progress, setProgress] = useState<{ p: number; label: string } | null>(null);
   const signal = useRef({ cancelled: false });
   const dur = projectDuration(p);
+  // desktop app: where the file goes. `chosen` = picked in the save dialog (the engine only writes there)
+  const [target, setTarget] = useState<{ path: string; chosen: boolean } | null>(null);
+  const fileName = `${p.name || "video"}.${format}`;
+  useEffect(() => {
+    if (!desktop) return;
+    // a different format needs a new location (the file extension changes)
+    if (target?.chosen && target.path.toLowerCase().endsWith(`.${format}`)) return;
+    desktop.defaultSavePath(fileName).then((path) => setTarget({ path, chosen: false }));
+  }, [format]);
+  const choose = async () => {
+    const path = await desktop!.chooseSavePath(target?.path ?? fileName, format);
+    if (path) setTarget({ path, chosen: true });
+    return path;
+  };
 
   const run = async () => {
+    // desktop app: confirm the location first, so a long render never ends in a dialog
+    let file = target?.chosen ? target.path : null;
+    if (desktop && !file) {
+      file = await choose();
+      if (!file) return;
+    }
     pause();
     const s = useStore.getState();
     let from = 0, to = dur;
@@ -38,8 +65,16 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
         onProgress: (x, label) => setProgress({ p: x, label }),
       });
       const ext = blob.type.includes("mp4") && format === "webm" ? "mp4" : format;
-      download(blob, `${p.name || "video"}.${ext}`);
-      s.notify(`Export finished in ${((performance.now() - started) / 1000).toFixed(1)}s ✓`, "ok");
+      const secs = ((performance.now() - started) / 1000).toFixed(1);
+      if (file) {
+        setProgress({ p: 1, label: "Saving…" });
+        await saveTo(file, blob);
+        const reveal = navigator.platform.startsWith("Mac") ? "Show in Finder" : "Show in folder";
+        s.notify(`Exported in ${secs}s ✓  ${file.split(/[\\/]/).pop()}`, "ok", { label: reveal, run: () => desktop!.showInFolder(file!) });
+      } else {
+        download(blob, `${p.name || "video"}.${ext}`);
+        s.notify(`Export finished in ${secs}s ✓`, "ok");
+      }
       onClose();
     } catch (e) {
       s.notify(e instanceof Error ? e.message : String(e), "error");
@@ -82,6 +117,12 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
                   <Select value={quality} options={[["high", "High"], ["medium", "Medium"], ["low", "Small file"]]} onChange={setQuality} />
                 </Field>
               </>
+            )}
+            {desktop && (
+              <Field label="Save to">
+                <span className="save-path" title={target?.path}><bdi>{target ? target.path.replace(/^\/(Users|home)\/[^/]+/, "~") : "…"}</bdi></span>
+                <button onClick={choose}>Change…</button>
+              </Field>
             )}
             <Field label="Range">
               <Select value={range} options={[["all", `Whole project (${dur.toFixed(1)}s)`], ["selection", "Selected clips only"]]} onChange={setRange} />

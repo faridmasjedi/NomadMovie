@@ -48,13 +48,10 @@ export function TopBar() {
         {ASPECTS.map((a, i) => <option key={i} value={i}>{a.label}</option>)}
       </select>
       <span className="spacer" />
-      <span className="status-pill">
-        <b className={h.ai ? "on" : "off"} onClick={() => setSettings(true)} title={h.ai ? `AI: ${h.providerLabel} · ${h.model}` : "AI is not connected — click to set it up"}>
-          ● AI {h.ai ? `(${h.providerLabel})` : "— connect"}
-        </b>
-        <b className={h.ffmpeg ? "on" : "off"}>● ffmpeg</b>
-        <b className={h.whisper ? "on" : "off"}>● Whisper</b>
-      </span>
+      {/* ffmpeg and Whisper status are in Settings → Tools */}
+      <button className={`ai-chip ${h.ai ? "on" : "off"}`} onClick={() => setSettings(true)} title={h.ai ? `AI: ${h.providerLabel} · ${h.model}` : "AI is not connected — click to set it up"}>
+        <span className="led" />{h.ai ? h.providerLabel : "Connect AI"}
+      </button>
       <button className="ghost" title="New project" onClick={async () => {
         if (!confirm("Discard the current project and its saved media?")) return;
         await clearAll();

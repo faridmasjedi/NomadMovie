@@ -4,6 +4,12 @@ import { makeTrack, newProject, uid } from "./factory";
 import { maskPtsAt } from "./engine/mask";
 import { setParent } from "./engine/rig";
 
+/** a button on a notice, e.g. "Show in Finder" after an export */
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 export type MaskTool = "edit" | "rect" | "ellipse" | "lasso" | "pen" | "ai";
 
 export type LeftTab = "media" | "text" | "elements" | "effects" | "transitions" | "audio" | "ai";
@@ -26,7 +32,7 @@ interface State {
   past: HistoryEntry[];
   future: Project[];
   clipboard: Clip[];
-  toast: { msg: string; kind: "info" | "error" | "ok"; id: number } | null;
+  toast: { msg: string; kind: "info" | "error" | "ok"; id: number; action?: ToastAction } | null;
   busy: string | null;
   loop: boolean;
   previewQuality: number; // 0.25..1
@@ -68,7 +74,7 @@ interface State {
   setPlaying: (p: boolean) => void;
   setZoom: (z: number) => void;
   setLeftTab: (t: LeftTab) => void;
-  notify: (msg: string, kind?: "info" | "error" | "ok") => void;
+  notify: (msg: string, kind?: "info" | "error" | "ok", action?: ToastAction) => void;
   setBusy: (b: string | null) => void;
   set: (patch: Partial<State>) => void;
   focusClip: (clipId: string, tab: string, key?: string) => void;
@@ -317,7 +323,7 @@ export const useStore = create<State>((set, get) => ({
   setPlaying: (playing) => set({ playing }),
   setZoom: (z) => set({ zoom: Math.min(600, Math.max(4, z)) }),
   setLeftTab: (leftTab) => set({ leftTab }),
-  notify: (msg, kind = "info") => set({ toast: { msg, kind, id: Date.now() } }),
+  notify: (msg, kind = "info", action) => set({ toast: { msg, kind, id: Date.now(), action } }),
   setBusy: (busy) => set({ busy }),
   set: (patch) => set(patch),
   focusClip: (clipId, tab, key) => set({ selected: [clipId], focus: { clipId, tab, key, at: Date.now() } }),

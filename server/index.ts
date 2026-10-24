@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
+import { pipeline } from "node:stream/promises";
 import { aiAssist, aiSubtitles, aiAvailable, listModels, testProvider } from "./ai.ts";
 import { claudeStatus, dataDir, findClaude, getConfig, modelFor, PROVIDERS, saveConfig, urlFor, type Config, type Provider } from "./config.ts";
 import { registerImport, SAFE_INPUT } from "./importer.ts";
@@ -290,6 +291,23 @@ export function createApp(opts: { staticDir?: string; token?: string } = {}) {
   // the desktop app may import straight from a file's location on disk instead of uploading a copy
   registerImport(app, FFMPEG, { allowPaths: !!opts.token });
 
+  /** desktop app: writes a finished export to the location the user chose in the save dialog (and nowhere else) */
+  if (opts.token) {
+    app.post("/api/save", async (req, res) => {
+      const target = path.resolve(String(req.query.path ?? ""));
+      if (!savePaths.has(target)) return void res.status(403).json({ error: "Choose where to save first" });
+      const tmp = `${target}.part`;
+      try {
+        await pipeline(req, fs.createWriteStream(tmp));
+        fs.renameSync(tmp, target);
+        res.json({ ok: true, path: target });
+      } catch (e) {
+        fs.rmSync(tmp, { force: true });
+        res.status(500).json({ error: `Could not save the file: ${errMsg(e)}` });
+      }
+    });
+  }
+
   /** local speech-to-text with the openai-whisper CLI, if installed */
   app.post("/api/transcribe", express.raw({ type: () => true, limit: "1gb" }), async (req, res) => {
     if (!WHISPER) return void res.status(501).json({ error: "whisper CLI is not installed (pip install openai-whisper)" });
@@ -332,6 +350,10 @@ export async function startServer(port: number, opts: { staticDir?: string; dev?
     srv.on("error", reject);
   });
 }
+
+/** locations the user picked in the desktop app's save dialog; exports may only be written there */
+const savePaths = new Set<string>();
+export const allowSavePath = (p: string) => void savePaths.add(path.resolve(p));
 
 /**
  * The desktop app's engine. It doesn't listen on the network: it serves a private socket (a Unix socket, or a

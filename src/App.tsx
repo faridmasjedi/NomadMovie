@@ -51,7 +51,7 @@ export default function App() {
   // toast auto-hide
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => useStore.setState({ toast: null }), toast.kind === "error" ? 5000 : 2800);
+    const t = setTimeout(() => useStore.setState({ toast: null }), toast.action ? 8000 : toast.kind === "error" ? 5000 : 2800);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -142,7 +142,12 @@ export default function App() {
       <Timeline />
       <ContextMenuHost />
       <UpdateBanner />
-      {toast && <div key={toast.id} className={`toast ${toast.kind}`}>{toast.msg}</div>}
+      {toast && (
+        <div key={toast.id} className={`toast ${toast.kind}`}>
+          {toast.msg}
+          {toast.action && <button className="ghost toast-action" onClick={() => (toast.action!.run(), useStore.setState({ toast: null }))}>{toast.action.label}</button>}
+        </div>
+      )}
       {busy && <div className="busy"><span className="spin" />{busy}</div>}
     </div>
   );

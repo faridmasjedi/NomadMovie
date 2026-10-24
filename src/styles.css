@@ -71,11 +71,20 @@ input[type="range"] { accent-color: var(--accent); min-width: 0; direction: ltr;
   display: flex; align-items: center; gap: 8px; padding: 0 12px;
   background: var(--bg1); border-bottom: 1px solid var(--line);
 }
+/* desktop app: the top bar is the window's title bar */
+html[data-desktop] .topbar { -webkit-app-region: drag; user-select: none; }
+html[data-desktop] .topbar :is(button, input, select, .status-pill b) { -webkit-app-region: no-drag; }
+html[data-desktop="darwin"] .topbar { padding-left: 84px; }
+html[data-desktop="win32"] .topbar { padding-right: 148px; }
 .logo { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; margin-inline-end: 8px; }
 .logo .dot { width: 22px; height: 22px; border-radius: 6px; background: conic-gradient(from 200deg, #7c5cff, #ff4d6d, #ffb703, #7c5cff); }
 .topbar .name { width: 180px; background: transparent; border-color: transparent; }
 .topbar .name:hover { border-color: var(--line); }
 .spacer { flex: 1; }
+.ai-chip { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px; border-radius: 99px; font-size: 12px; background: var(--bg2); border: 1px solid var(--line); color: var(--text); }
+.ai-chip .led { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.ai-chip.on .led { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.ai-chip.off { color: var(--dim); }
 .status-pill { font-size: 11px; color: var(--dim); display: flex; gap: 10px; }
 .status-pill b { font-weight: 400; }
 .status-pill .on { color: var(--ok); }
@@ -215,6 +224,8 @@ input[type="range"] { accent-color: var(--accent); min-width: 0; direction: ltr;
   animation: toastIn 0.2s ease-out; max-width: 80vw;
 }
 .toast.error { border-color: var(--danger); }
+.save-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; font-size: 12px; color: var(--dim); }
+.toast-action { margin-left: 10px; padding: 3px 10px; color: var(--accent2); }
 .toast.ok { border-color: var(--ok); }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } }
 .update-banner {

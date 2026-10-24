@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, session, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, dialog, session, shell } from "electron";
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
@@ -14,7 +14,14 @@ const ORIGIN = "http://127.0.0.1:47821";
 // `--smoke-test=<file>`: start with a throwaway profile, check that everything works, write the result, quit (used by CI)
 const smokeArg = process.argv.find((a) => a.startsWith("--smoke-test"));
 const smokeOut = smokeArg ? smokeArg.split("=")[1] || path.join(os.tmpdir(), "nomadmovie-smoke.json") : null;
-if (smokeOut) app.setPath("userData", fs.mkdtempSync(path.join(os.tmpdir(), "nomadmovie-smoke-")));
+if (smokeOut) {
+  app.setPath("userData", fs.mkdtempSync(path.join(os.tmpdir(), "nomadmovie-smoke-")));
+  // never hang a CI job, whatever goes wrong
+  setTimeout(() => {
+    fs.writeFileSync(smokeOut, JSON.stringify({ ok: false, error: "timed out" }));
+    app.exit(2);
+  }, 150_000).unref();
+}
 
 // the app was called "Farid Editor" (and before that "Nova Editor"): on the first start, bring its projects and
 // settings along. (Electron creates the new data folder before this runs, so a marker file records the migration.)
@@ -64,6 +71,13 @@ async function createWindow() {
     title: "NomadMovie",
     backgroundColor: "#0d0e12",
     show: false,
+    // one dark bar instead of the system's title bar on top of the editor's own: macOS puts its window buttons
+    // inside it, Windows draws minimize / maximize / close over it (Linux keeps its normal frame)
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 16, y: 17 } }
+      : process.platform === "win32"
+        ? { titleBarStyle: "hidden" as const, titleBarOverlay: { color: "#14161c", symbolColor: "#c9ccd6", height: 47 } }
+        : {}),
     webPreferences: {
       // the editor is a plain web page: no Node.js access, isolated and sandboxed; preload.ts is its only bridge
       preload: path.join(import.meta.dirname, "preload.cjs"),
@@ -91,6 +105,28 @@ async function createWindow() {
   await win.loadURL(`${ORIGIN}/`);
 }
 
+/** Export → "Save to": the system save dialog; the engine may write only to locations chosen here */
+function registerSaving(allowSavePath: (p: string) => void) {
+  const chosen = new Set<string>();
+  const fromEditor = (e: Electron.IpcMainInvokeEvent) => !!e.senderFrame && new URL(e.senderFrame.url).origin === ORIGIN;
+  ipcMain.handle("save:default", (e, name: string) => (fromEditor(e) ? path.join(app.getPath("videos"), path.basename(String(name))) : ""));
+  ipcMain.handle("save:choose", async (e, suggested: string, ext: string) => {
+    if (!fromEditor(e) || !win) return null;
+    const r = await dialog.showSaveDialog(win, {
+      title: "Export to",
+      defaultPath: suggested || path.join(app.getPath("videos"), `video.${ext}`),
+      filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    chosen.add(r.filePath);
+    allowSavePath(r.filePath);
+    return r.filePath;
+  });
+  ipcMain.handle("save:reveal", (e, file: string) => {
+    if (fromEditor(e) && chosen.has(file)) shell.showItemInFolder(file);
+  });
+}
+
 /** the engine talks to the window over a private socket (a named pipe on Windows), protected by a random token */
 function privateSocket() {
   const id = `nomadmovie-${process.pid}-${randomBytes(6).toString("hex")}`;
@@ -111,10 +147,16 @@ app.whenReady().then(async () => {
   const socket = privateSocket();
   const token = randomBytes(32).toString("hex");
   try {
-    const { startPrivateEngine } = await import("../server/index.ts");
+    const { startPrivateEngine, allowSavePath } = await import("../server/index.ts");
     await startPrivateEngine({ socket, token, staticDir: path.join(app.getAppPath(), "dist") });
+    registerSaving(allowSavePath);
   } catch (e) {
-    dialog.showErrorBox("NomadMovie", `Could not start NomadMovie's engine.\n\n${e instanceof Error ? e.message : e}`);
+    const msg = `Could not start NomadMovie's engine.\n\n${e instanceof Error ? e.message : e}`;
+    if (smokeOut) {
+      fs.writeFileSync(smokeOut, JSON.stringify({ ok: false, error: msg }));
+      return void app.exit(1);
+    }
+    dialog.showErrorBox("NomadMovie", msg);
     app.quit();
     return;
   }
@@ -151,10 +193,6 @@ app.on("window-all-closed", () => {
 /** checks that the installed app really works: editor, engine, ffmpeg, graphics, storage, and no open port */
 async function smokeTest(out: string) {
   const result: Record<string, unknown> = { version: app.getVersion(), platform: `${process.platform}-${process.arch}` };
-  setTimeout(() => {
-    fs.writeFileSync(out, JSON.stringify({ ...result, ok: false, error: "timed out" }, null, 2));
-    app.exit(2);
-  }, 120_000).unref();
   let ok = false;
   try {
     result.noOpenPort = await new Promise<boolean>((resolve) => {
