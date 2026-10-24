@@ -39,6 +39,11 @@ app.on("second-instance", () => {
   }
 });
 
+/** only web links leave the app (never file:// or other schemes) */
+function openOutside(u: string) {
+  if (/^https?:\/\//i.test(u) && !u.startsWith(`http://127.0.0.1:${PORT}`)) shell.openExternal(u);
+}
+
 async function createWindow(url: string) {
   win = new BrowserWindow({
     width: 1600,
@@ -49,6 +54,11 @@ async function createWindow(url: string) {
     backgroundColor: "#0d0e12",
     show: false,
     webPreferences: {
+      // the editor is a plain web page: no Node.js access, isolated and sandboxed
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
       backgroundThrottling: false, // keep rendering exports when the window is in the background
       spellcheck: false,
     },
@@ -56,8 +66,14 @@ async function createWindow(url: string) {
   win.once("ready-to-show", () => win?.show());
   // links to the outside world open in the default browser
   win.webContents.setWindowOpenHandler(({ url: u }) => {
-    if (!u.startsWith(url)) shell.openExternal(u);
+    openOutside(u);
     return { action: "deny" };
+  });
+  // the window only ever shows the editor; any other page goes to the browser instead
+  win.webContents.on("will-navigate", (e, u) => {
+    if (new URL(u).origin === url) return;
+    e.preventDefault();
+    openOutside(u);
   });
   win.on("closed", () => (win = null));
   await win.loadURL(url);
@@ -65,8 +81,10 @@ async function createWindow(url: string) {
 
 app.whenReady().then(async () => {
   // microphone for voice-over recording
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(["media", "fullscreen", "clipboard-sanitized-write"].includes(permission)));
-  session.defaultSession.setPermissionCheckHandler((_wc, permission) => ["media", "fullscreen"].includes(permission));
+  // (only for the editor's own page)
+  const ours = (u?: string) => !!u && u.startsWith(`http://127.0.0.1:${PORT}`);
+  session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => cb(ours(wc.getURL()) && ["media", "fullscreen", "clipboard-sanitized-write"].includes(permission)));
+  session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => ours(origin) && ["media", "fullscreen"].includes(permission));
 
   // exports: ask where to save
   session.defaultSession.on("will-download", (_e, item) => {
@@ -99,6 +117,9 @@ app.whenReady().then(async () => {
     if (!BrowserWindow.getAllWindows().length) createWindow(url);
   });
 });
+
+// no <webview> tags or extra windows with their own settings
+app.on("web-contents-created", (_e, wc) => wc.on("will-attach-webview", (ev) => ev.preventDefault()));
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

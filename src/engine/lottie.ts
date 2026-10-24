@@ -4,6 +4,7 @@ import type { MediaItem } from "../types";
  * Lottie animations (the JSON format After Effects animations are exported to, e.g. from LottieFiles).
  * Each one gets its own canvas player; the renderer asks for the frame at a given time, so preview and
  * export draw exactly the same frames. Lottie files loop.
+ * The "light" player is used on purpose: it ignores expressions, which are JavaScript embedded in the file.
  */
 
 import type { AnimationConfigWithData, AnimationItem, LottiePlayer } from "lottie-web";
@@ -13,7 +14,7 @@ type Anim = AnimationItem;
 
 let lib: LottieModule | null = null;
 let loading: Promise<LottieModule> | null = null;
-const loadLib = () => (loading ??= import("lottie-web/build/player/lottie_canvas").then((m) => (lib = ((m as { default?: LottieModule }).default ?? m) as LottieModule)));
+const loadLib = () => (loading ??= import("lottie-web/build/player/lottie_light_canvas").then((m) => (lib = ((m as { default?: LottieModule }).default ?? m) as LottieModule)));
 
 interface Player {
   anim: Anim;
