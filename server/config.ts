@@ -105,40 +105,54 @@ function nvmBins(exe: string) {
   }
 }
 
-/** finds the `claude` binary, also when launched from a GUI app that has a minimal PATH */
+let loginPath: string | undefined;
+
+/**
+ * The PATH of the user's login shell. Apps opened from Finder / the desktop start with a minimal PATH that doesn't
+ * include nvm, Homebrew or ~/.local/bin, so without this we could pick up a different (or broken) `claude`, or
+ * none at all, and a Node-based `claude` couldn't find `node`.
+ */
+function loginShellPath() {
+  if (loginPath !== undefined) return loginPath;
+  loginPath = "";
+  if (process.platform === "win32") return loginPath;
+  try {
+    const shell = process.env.SHELL || os.userInfo().shell || "/bin/zsh";
+    const out = execFileSync(shell, ["-ilc", 'printf "\n__NOMAD_PATH__%s" "$PATH"'], { encoding: "utf8", timeout: 8000, stdio: ["ignore", "pipe", "ignore"] });
+    loginPath = out.split("__NOMAD_PATH__").pop()?.trim() ?? "";
+  } catch {
+    /* no usable login shell: fall back to the usual locations */
+  }
+  return loginPath;
+}
+
+/** the user's PATH first (like in their terminal), then the app's own */
+const searchPath = () => [...loginShellPath().split(path.delimiter), ...(process.env.PATH ?? "").split(path.delimiter)].filter(Boolean);
+
+/** finds the `claude` the user's terminal would run, also when the app was opened from Finder / the desktop */
 export function findClaude(): string | null {
   if (claudePath !== undefined) return claudePath;
   const exe = process.platform === "win32" ? "claude.cmd" : "claude";
   const candidates = [
     process.env.NOMAD_CLAUDE_PATH,
-    ...(process.env.PATH ?? "").split(path.delimiter).map((d) => path.join(d, exe)),
+    ...searchPath().map((d) => path.join(d, exe)),
     path.join(os.homedir(), ".claude", "local", exe),
     path.join(os.homedir(), ".local", "bin", exe),
+    ...nvmBins(exe),
     "/opt/homebrew/bin/claude",
     "/usr/local/bin/claude",
-    ...nvmBins(exe),
   ].filter(Boolean) as string[];
   claudePath = candidates.find((p) => fs.existsSync(p)) ?? null;
-  if (!claudePath && process.platform !== "win32") {
-    // ask the user's login shell (covers nvm / custom PATH setups)
-    try {
-      const shell = process.env.SHELL || "/bin/zsh";
-      const out = execFileSync(shell, ["-ilc", "command -v claude"], { encoding: "utf8", timeout: 8000 }).trim().split("\n").pop();
-      if (out && fs.existsSync(out)) claudePath = out;
-    } catch {
-      /* not installed */
-    }
-  }
   return claudePath;
 }
 
-/** env for spawning claude: drop API keys so it uses the user's claude.ai subscription login */
+/** env for spawning claude: the user's PATH (so a Node-based claude finds `node`), and no API keys so it uses the user's claude.ai subscription login */
 export function claudeEnv() {
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY;
   delete env.ANTHROPIC_AUTH_TOKEN;
   const bin = findClaude();
-  if (bin) env.PATH = `${path.dirname(bin)}${path.delimiter}${env.PATH ?? ""}`; // node for nvm installs
+  env.PATH = [...new Set([...(bin ? [path.dirname(bin)] : []), ...searchPath()])].join(path.delimiter);
   return env;
 }
 

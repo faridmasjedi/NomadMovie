@@ -86,6 +86,7 @@ Download the installer for your system from the **[latest release](https://githu
 - **Windows:** run the `setup.exe`. If SmartScreen appears, click **More info → Run anyway**.
 - **Linux:** use the `.AppImage` (make it executable and run it) or install the `.deb`.
 - **No installer?** Every release also has a plain `.zip` for each system: unzip it and run NomadMovie directly.
+- **Updates:** the app checks for new versions. With the Windows installer or the Linux AppImage it installs them when you restart; otherwise it shows a **Download** button.
 
 ## Build from source
 
@@ -109,11 +110,13 @@ Contributions are welcome! `main` is protected: changes go through a pull reques
 
 ## How it's built
 
-React, TypeScript and Vite for the interface, a Canvas/WebGL compositor for rendering, Web Audio for sound, WebCodecs for fast export, Electron for the desktop app, and a small local Express engine (bundled ffmpeg, AI calls).
+React, TypeScript and Vite for the interface, a Canvas/WebGL compositor for rendering, Web Audio for sound, WebCodecs for fast export, Electron for the desktop app, and an engine for ffmpeg, AI calls and settings. In the desktop app the window reaches the engine through Electron and a private socket, so nothing listens on the network.
 
 ```
-electron/main.ts         desktop shell: window, permissions, starts the local engine
-server/index.ts          local engine: Express, ffmpeg, Whisper, settings
+electron/main.ts         desktop shell: window, permissions, engine start-up, self-test
+electron/bridge.ts       passes the window's requests to the engine (no network port)
+electron/updates.ts      checks GitHub Releases for new versions
+server/index.ts          engine: Express, ffmpeg, Whisper, settings
 server/ai.ts             AI providers: Claude (subscription or API) and OpenAI-compatible services
 server/config.ts         AI settings and Claude Code discovery
 src/engine/render.ts     compositor: layers, filters, effects, masks, chroma key, text, shapes

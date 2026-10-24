@@ -13,6 +13,7 @@ import "@fontsource/playfair-display/700.css";
 import "@fontsource/playfair-display/700-italic.css";
 import "@fontsource/roboto-mono/400.css";
 import "./styles.css";
+import "./desktop";
 
 createRoot(document.getElementById("root")!).render(<App />);
 

@@ -50,6 +50,8 @@ export function addAtPlayhead(make: (start: number) => Clip) {
   const c = make(s.currentTime);
   c.trackId = s.ensureTrackFor(c.kind === "audio" ? "audio" : "video", c.start, c.duration);
   s.addClip(c);
+  // with an In animation the new clip is still invisible at its first frame: show it fully played in
+  if (!s.playing && c.animIn !== "none" && c.animInDur > 0) s.setTime(c.start + Math.min(c.animInDur, c.duration / 2));
   return c;
 }
 

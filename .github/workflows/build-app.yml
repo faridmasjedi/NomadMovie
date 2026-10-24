@@ -44,6 +44,7 @@ jobs:
             slug: mac-arm64
             os: macos-latest
             args: --mac --arm64
+            smoke: release/mac-arm64/NomadMovie.app/Contents/MacOS/NomadMovie
           - name: macOS (Intel)
             slug: mac-x64
             os: macos-latest
@@ -53,10 +54,12 @@ jobs:
             slug: windows-x64
             os: windows-latest
             args: --win --x64
+            smoke: release/win-unpacked/NomadMovie.exe
           - name: Linux
             slug: linux-x64
             os: ubuntu-latest
             args: --linux --x64
+            smoke: release/linux-unpacked/nomadmovie
     steps:
       - uses: actions/checkout@v4
         with:
@@ -101,6 +104,32 @@ jobs:
           fi
           if [ -z "$APPLE_ID" ]; then unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
           npx electron-builder ${{ matrix.args }} --publish never
+      # start the packaged app and check that the editor, engine, ffmpeg, graphics and storage work (see smokeTest in electron/main.ts)
+      - name: Test the packaged app
+        if: matrix.smoke
+        timeout-minutes: 6
+        shell: bash
+        env:
+          APP: ${{ matrix.smoke }}
+        run: |
+          # The app writes its progress to the result file (stage: started → engine running → window open → final)
+          # and quits by itself after 150 s at most. We wait for a final result rather than for the process.
+          out="$RUNNER_TEMP/smoke.json"; log="$RUNNER_TEMP/smoke.log"; err="$RUNNER_TEMP/smoke.err"
+          rm -f "$out" "$log" "$err"
+          export ELECTRON_ENABLE_LOGGING=1
+          # CI machines have no GPU: allow software WebGL
+          case "$RUNNER_OS" in
+            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" >"$log" 2>"$err" & ;;
+            Windows)
+              # started through PowerShell so the app's output is captured (Git Bash can't capture it from a GUI app)
+              pwsh -NoProfile -Command "Start-Process -FilePath (Resolve-Path '$APP') -ArgumentList '--enable-unsafe-swiftshader','--smoke-test=$out' -RedirectStandardOutput '$log' -RedirectStandardError '$err'" ;;
+            *) "$APP" --smoke-test="$out" >"$log" 2>"$err" & ;;
+          esac
+          final() { node -e "try { process.exit(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).final ? 0 : 1) } catch { process.exit(1) }" "$out"; }
+          for i in $(seq 1 240); do final && break; sleep 1; done
+          show() { node -e "const fs = require('fs'); for (const f of process.argv.slice(1)) { console.log('--- ' + f + ' ---'); try { console.log(fs.readFileSync(f, 'utf8').split('\\n').slice(-40).join('\\n')) } catch { console.log('(none)') } }" "$@"; }
+          show "$log" "$err" "$out"
+          node -e "process.exit(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).ok ? 0 : 1)" "$out"
       - uses: actions/upload-artifact@v4
         with:
           name: NomadMovie-${{ matrix.slug }}
@@ -112,3 +141,7 @@ jobs:
             release/*.exe
             release/*.AppImage
             release/*.deb
+            release/latest.yml
+            release/latest-linux.yml
+            release/*.exe.blockmap
+            release/*.AppImage.blockmap
