@@ -8,13 +8,14 @@
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc --noEmit",
-    "build:electron": "esbuild electron/main.ts --bundle --platform=node --format=esm --packages=external --target=node20 --outfile=dist-electron/main.mjs",
+    "build:electron": "esbuild electron/main.ts --bundle --platform=node --format=esm --packages=external --target=node20 --outfile=dist-electron/main.mjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --external:electron --target=node20 --outfile=dist-electron/preload.cjs",
     "app": "npm run build && npm run build:electron && electron .",
     "dist": "npm run build && npm run build:electron && electron-builder --publish never",
     "dist:mac": "npm run build && npm run build:electron && electron-builder --mac --publish never"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
+    "electron-updater": "^6.8.11",
     "express": "^4.21.2",
     "ffmpeg-static": "^5.2.0"
   },
@@ -118,7 +119,14 @@
       "maintainer": "Farid Masjedi <farid.masjedi1985@gmail.com>",
       "synopsis": "Video editor with AI"
     },
-    "afterSign": "build/adhoc-sign.cjs"
+    "afterSign": "build/adhoc-sign.cjs",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "faridmasjedi",
+        "repo": "NomadMovie"
+      }
+    ]
   },
   "license": "MIT",
   "homepage": "https://github.com/faridmasjedi/NomadMovie",

@@ -103,9 +103,11 @@ function localOnly(req: express.Request, res: express.Response, next: express.Ne
   next();
 }
 
-export function createApp(opts: { staticDir?: string } = {}) {
+export function createApp(opts: { staticDir?: string; token?: string } = {}) {
   const app = express();
   app.disable("x-powered-by");
+  // desktop app: only requests carrying the app's secret token are answered (see startPrivateEngine)
+  if (opts.token) app.use((req, res, next) => (req.headers["x-nomad-token"] === opts.token ? next() : void res.status(403).end()));
   app.use(localOnly);
   app.use("/api/ai", express.json({ limit: "25mb" }));
   app.use("/api/settings", express.json());
@@ -285,7 +287,8 @@ export function createApp(opts: { staticDir?: string } = {}) {
     }
   });
 
-  registerImport(app, FFMPEG);
+  // the desktop app may import straight from a file's location on disk instead of uploading a copy
+  registerImport(app, FFMPEG, { allowPaths: !!opts.token });
 
   /** local speech-to-text with the openai-whisper CLI, if installed */
   app.post("/api/transcribe", express.raw({ type: () => true, limit: "1gb" }), async (req, res) => {
@@ -328,6 +331,21 @@ export async function startServer(port: number, opts: { staticDir?: string; dev?
     const srv = app.listen(port, "127.0.0.1", () => resolve((srv.address() as AddressInfo).port));
     srv.on("error", reject);
   });
+}
+
+/**
+ * The desktop app's engine. It doesn't listen on the network: it serves a private socket (a Unix socket, or a
+ * named pipe on Windows) that only the app itself talks to, and every request must carry the app's secret token.
+ */
+export async function startPrivateEngine(opts: { socket: string; token: string; staticDir: string }) {
+  const app = createApp({ staticDir: opts.staticDir, token: opts.token });
+  const unix = process.platform !== "win32";
+  if (unix) fs.rmSync(opts.socket, { force: true });
+  await new Promise<void>((resolve, reject) => {
+    const srv = app.listen(opts.socket, () => resolve());
+    srv.on("error", reject);
+  });
+  if (unix) fs.chmodSync(opts.socket, 0o600);
 }
 
 export const capabilities = () => ({ ffmpeg: FFMPEG, whisper: WHISPER, claude: findClaude() });

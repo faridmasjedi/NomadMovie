@@ -44,6 +44,7 @@ jobs:
             slug: mac-arm64
             os: macos-latest
             args: --mac --arm64
+            smoke: release/mac-arm64/NomadMovie.app/Contents/MacOS/NomadMovie
           - name: macOS (Intel)
             slug: mac-x64
             os: macos-latest
@@ -53,10 +54,12 @@ jobs:
             slug: windows-x64
             os: windows-latest
             args: --win --x64
+            smoke: release/win-unpacked/NomadMovie.exe
           - name: Linux
             slug: linux-x64
             os: ubuntu-latest
             args: --linux --x64
+            smoke: release/linux-unpacked/nomadmovie
     steps:
       - uses: actions/checkout@v4
         with:
@@ -101,6 +104,22 @@ jobs:
           fi
           if [ -z "$APPLE_ID" ]; then unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
           npx electron-builder ${{ matrix.args }} --publish never
+      # start the packaged app and check that the editor, engine, ffmpeg, graphics and storage work (see smokeTest in electron/main.ts)
+      - name: Test the packaged app
+        if: matrix.smoke
+        shell: bash
+        env:
+          APP: ${{ matrix.smoke }}
+        run: |
+          out="$RUNNER_TEMP/smoke.json"
+          # CI machines have no GPU: allow software WebGL
+          case "$RUNNER_OS" in
+            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" || code=$? ;;
+            Windows) pwsh -NoProfile -Command "\$p = Start-Process -FilePath '$APP' -ArgumentList '--enable-unsafe-swiftshader','--smoke-test=$out' -Wait -PassThru; exit \$p.ExitCode" || code=$? ;;
+            *) "$APP" --smoke-test="$out" || code=$? ;;
+          esac
+          cat "$out" || echo "no result written"
+          exit ${code:-0}
       - uses: actions/upload-artifact@v4
         with:
           name: NomadMovie-${{ matrix.slug }}
@@ -112,3 +131,7 @@ jobs:
             release/*.exe
             release/*.AppImage
             release/*.deb
+            release/latest.yml
+            release/latest-linux.yml
+            release/*.exe.blockmap
+            release/*.AppImage.blockmap

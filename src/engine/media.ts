@@ -1,5 +1,6 @@
 import type { MediaItem } from "../types";
 import { uid } from "../factory";
+import { desktop } from "../desktop";
 import { audioEngine } from "./audio";
 import { loadLottie } from "./lottie";
 
@@ -90,11 +91,14 @@ const MIME: Record<string, string> = { mp4: "video/mp4", flac: "audio/flac", jpg
 
 /** converts any file on the local engine; returns a browser-playable blob */
 async function convertOnEngine(file: Blob, name: string, force: boolean, onProgress?: ImportProgress) {
-  onProgress?.("Sending to converter", 0);
-  const res = await fetch(`/api/import?name=${encodeURIComponent(name)}${force ? "&force=1" : ""}`, {
+  // in the desktop app the engine reads the file where it is, instead of receiving a copy
+  const onDisk = file instanceof File ? desktop?.pathForFile(file) : "";
+  onProgress?.(onDisk ? "Reading file" : "Sending to converter", 0);
+  const q = `name=${encodeURIComponent(name)}${force ? "&force=1" : ""}${onDisk ? `&path=${encodeURIComponent(onDisk)}` : ""}`;
+  const res = await fetch(`/api/import?${q}`, {
     method: "POST",
     headers: { "Content-Type": "application/octet-stream" },
-    body: file,
+    body: onDisk ? null : file,
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Converter is not available");
   const { id } = await res.json();

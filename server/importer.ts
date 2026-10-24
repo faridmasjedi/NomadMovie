@@ -161,31 +161,43 @@ setInterval(() => {
   }
 }, 5 * 60_000).unref();
 
-export function registerImport(app: Express, ffmpeg: string | null) {
-  /** body = the file (streamed to disk); query: name, force=1 to always re-encode */
+export function registerImport(app: Express, ffmpeg: string | null, opts: { allowPaths?: boolean } = {}) {
+  /**
+   * body = the file (streamed to disk); query: name, force=1 to always re-encode.
+   * Desktop app: `path` = the file's location on disk, read in place (no upload; it is never modified or deleted).
+   */
   app.post("/api/import", async (req: Request, res: Response) => {
-    const name = path.basename(String(req.query.name ?? "media.bin")).slice(0, 200);
+    const src = opts.allowPaths && typeof req.query.path === "string" ? req.query.path : "";
+    const name = path.basename(String(req.query.name ?? (src || "media.bin"))).slice(0, 200);
     const job: Job = { id: randomUUID(), status: "running", progress: 0, stage: "Receiving file", dir: fs.mkdtempSync(path.join(os.tmpdir(), "nomad-imp-")), createdAt: Date.now() };
     jobs.set(job.id, job);
-    const input = path.join(job.dir, `input${path.extname(name).toLowerCase() || ".bin"}`);
+    let input = path.join(job.dir, `input${path.extname(name).toLowerCase() || ".bin"}`);
     try {
-      await pipeline(req, fs.createWriteStream(input));
-    } catch (e) {
+      if (src) {
+        if (!path.isAbsolute(src) || !fs.statSync(src).isFile()) throw new Error("not a file");
+        input = src;
+        req.resume();
+      } else await pipeline(req, fs.createWriteStream(input));
+    } catch {
       job.status = "error";
-      job.error = "Upload failed";
-      return void res.status(500).json({ error: job.error });
+      job.error = src ? "Could not read the file" : "Upload failed";
+      return void res.status(src ? 400 : 500).json({ error: job.error });
     }
     res.json({ id: job.id });
+    // only our own upload copy is removed, never the user's file
+    const cleanup = () => {
+      if (!src) fs.rmSync(input, { force: true });
+    };
     convert(job, ffmpeg, input, name, req.query.force === "1")
       .then(() => {
         job.status = "done";
         job.progress = 1;
-        fs.rmSync(input, { force: true });
+        cleanup();
       })
       .catch((e) => {
         job.status = "error";
         job.error = e instanceof Error ? e.message : String(e);
-        fs.rmSync(input, { force: true });
+        cleanup();
       });
   });
 

@@ -12,6 +12,7 @@ import { uid } from "./factory";
 import { FONTS } from "./engine/presets";
 import { markDirty } from "./components/Preview";
 import { ContextMenuHost } from "./components/ContextMenu";
+import { UpdateBanner } from "./components/UpdateBanner";
 
 export default function App() {
   const toast = useStore((s) => s.toast);
@@ -140,6 +141,7 @@ export default function App() {
       <div className="resizer" onPointerDown={startResize} />
       <Timeline />
       <ContextMenuHost />
+      <UpdateBanner />
       {toast && <div key={toast.id} className={`toast ${toast.kind}`}>{toast.msg}</div>}
       {busy && <div className="busy"><span className="spin" />{busy}</div>}
     </div>
