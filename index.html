@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NomadMovie — free AI video editor</title>
+<meta name="description" content="NomadMovie is a free, open-source desktop video editor with AI built in: multi-track timeline, 90 GPU effects, 155 transitions, keyframes, masks, one-click AI cut-outs and an AI assistant that edits for you. For macOS, Windows and Linux.">
+<meta property="og:title" content="NomadMovie — free AI video editor">
+<meta property="og:description" content="Edit on a multi-track timeline, animate like After Effects, cut people out with one click, and let an AI assistant do the tedious parts. Free and open source.">
+<meta property="og:image" content="https://faridmasjedi.github.io/NomadMovie/media/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top">
+  <button class="icon-btn menu-btn" id="menu" aria-label="Menu">☰</button>
+  <a class="brand" href="#overview"><img src="assets/icon.png" alt="">NomadMovie</a>
+  <span class="spacer"></span>
+  <a class="top-link" href="#first-video">Docs</a>
+  <a class="top-link" href="https://github.com/faridmasjedi/NomadMovie">GitHub</a>
+  <button class="icon-btn" id="theme" title="Light / dark" aria-label="Switch light or dark">◐</button>
+  <a class="btn primary" href="#download">⬇ <span class="long">Download</span></a>
+</header>
+
+<div class="layout">
+<aside class="side" id="side">
+  <input class="search" id="search" placeholder="Search the docs…" aria-label="Search the docs">
+  <nav class="nav" id="nav"></nav>
+</aside>
+
+<main>
+
+<!-- ============================== GET STARTED ============================== -->
+
+<section class="page" id="overview" data-group="Get started" data-title="Overview" data-icon="🏠">
+  <div class="hero">
+    <div>
+      <div class="kicker">Free · open source · macOS, Windows, Linux</div>
+      <h1>Edit like a pro. Let AI do the boring parts.</h1>
+      <p class="lead">NomadMovie is a desktop video editor with a multi-track timeline, After Effects-style animation, one-click AI cut-outs and an AI assistant that edits your project when you describe what you want.</p>
+      <div class="actions">
+        <a class="btn primary big" data-best-download href="#download">⬇ Download <span class="os"></span></a>
+        <a class="btn big" href="#first-video">Read the guide</a>
+      </div>
+      <div class="note">Version <span data-version>latest</span> · MIT license · your footage never leaves your computer</div>
+    </div>
+    <figure class="demo" data-gif="hero" data-caption="A quick tour: titles, transitions, effects, animation and AI cut-outs."></figure>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>90</b><span>GPU effects</span></div>
+    <div class="stat"><b>155</b><span>transitions</span></div>
+    <div class="stat"><b>16</b><span>color looks</span></div>
+    <div class="stat"><b>13</b><span>one-click motion presets</span></div>
+    <div class="stat"><b>7</b><span>ways to connect an AI</span></div>
+    <div class="stat"><b>60+</b><span>video, audio and photo formats</span></div>
+  </div>
+
+  <h3 class="section-title">Everything it can do</h3>
+  <div class="cards">
+    <a class="card" href="#import" data-gif="import"><div class="body"><h4>📥 Import anything</h4><p>MKV, AVI, ProRes, HEVC, HEIC, RAW photos, PSD… converted automatically.</p></div></a>
+    <a class="card" href="#timeline" data-gif="editing"><div class="body"><h4>✂ Multi-track timeline</h4><p>Split, trim, ripple delete, snapping, markers and unlimited undo.</p></div></a>
+    <a class="card" href="#text" data-gif="text"><div class="body"><h4>🔤 Titles</h4><p>10 text styles, 9 fonts and 13 in/out animations like typewriter and pop.</p></div></a>
+    <a class="card" href="#effects" data-gif="effects"><div class="body"><h4>✨ 90 GPU effects</h4><p>Glow, VHS, glitch, film looks, light leaks, weather and more, all live.</p></div></a>
+    <a class="card" href="#transitions" data-gif="transitions"><div class="body"><h4>⇄ 155 transitions</h4><p>Drag one onto a cut. Cubes, page curls, glitches, light leaks…</p></div></a>
+    <a class="card" href="#effect-layers" data-gif="effect-layer"><div class="body"><h4>🧱 Effect layers</h4><p>One effect over everything below it, like an adjustment layer.</p></div></a>
+    <a class="card" href="#keyframes" data-gif="keyframes"><div class="body"><h4>◆ Keyframes</h4><p>Animate position, size, rotation, opacity and blur with 8 easing curves.</p></div></a>
+    <a class="card" href="#motion-presets" data-gif="motion-presets"><div class="body"><h4>🎈 Motion presets</h4><p>Float, wiggle, bounce, spin, pendulum… without a single keyframe.</p></div></a>
+    <a class="card" href="#illustrations" data-gif="animate-parts"><div class="body"><h4>🤖 Animate illustrations</h4><p>Split an SVG into parts, set anchor points and parent them.</p></div></a>
+    <a class="card" href="#zoom-pan" data-gif="zoom-pan"><div class="body"><h4>🔍 Zoom & pan</h4><p>Camera moves inside a clip, zooming into exactly the point you pick.</p></div></a>
+    <a class="card" href="#masks" data-gif="masks"><div class="body"><h4>⭕ Masks</h4><p>Box, ellipse, freehand or point masks with feather, invert and keys.</p></div></a>
+    <a class="card" href="#ai-cutout" data-gif="ai-cutout"><div class="body"><h4>🪄 AI cut-out</h4><p>Click a person and they're outlined and tracked through the clip.</p></div></a>
+    <a class="card" href="#color" data-gif="color"><div class="body"><h4>🎨 Color</h4><p>16 looks plus brightness, contrast, temperature, tint, vignette…</p></div></a>
+    <a class="card" href="#chroma" data-gif="chroma"><div class="body"><h4>🟩 Green screen</h4><p>Key out any color and put your subject anywhere.</p></div></a>
+    <a class="card" href="#audio" data-gif="audio-line"><div class="body"><h4>🎚 Audio on the timeline</h4><p>Drag the volume line, fade handles and volume keyframes.</p></div></a>
+    <a class="card" href="#audio-tools" data-gif="audio-tools"><div class="body"><h4>🎛 Smart audio</h4><p>Remove silences, denoise, EQ, auto-duck music, find the beats.</p></div></a>
+    <a class="card" href="#ai" data-gif="ai-assistant"><div class="body"><h4>🤖 AI assistant</h4><p>“Make a 5-second intro with my channel name” and it's done.</p></div></a>
+    <a class="card" href="#subtitles" data-gif="ai-subtitles"><div class="body"><h4>💬 Subtitles</h4><p>Paste the script and AI times it to the speech. Export SRT.</p></div></a>
+    <a class="card" href="#presets" data-gif="presets"><div class="body"><h4>★ My presets</h4><p>Save a clip's look and apply it to any other clip in one click.</p></div></a>
+    <a class="card" href="#export" data-gif="export"><div class="body"><h4>📤 Fast export</h4><p>Hardware encoding, faster than real time. MP4, MOV, WebM, GIF, MP3, WAV.</p></div></a>
+  </div>
+
+  <h3 class="section-title">Why NomadMovie</h3>
+  <div class="cols">
+    <div class="box"><h4>🔒 Private by design</h4><p>Everything runs on your computer. Footage, projects and AI cut-outs stay local. Only the AI assistant talks to the AI service you choose.</p></div>
+    <div class="box"><h4>🧠 Bring your own AI</h4><p>Use your Claude Pro or Max subscription, an API key from Claude, ChatGPT, Gemini or OpenRouter, or a free local model. Or no AI at all: every tool works without it.</p></div>
+    <div class="box"><h4>⚡ Fast</h4><p>GPU effects and transitions, and an export that renders and hardware-encodes frames directly: an 8-second 1080p video exports in about 3 seconds on a 2019 laptop.</p></div>
+    <div class="box"><h4>💸 Free forever</h4><p>Open source under the MIT license. No watermark, no account, no subscription for the editor itself.</p></div>
+  </div>
+</section>
+
+<section class="page" id="download" data-group="Get started" data-title="Download & install" data-icon="⬇">
+  <div class="kicker">Get started</div>
+  <h2>Download & install</h2>
+  <p class="lead">Version <b data-version>latest</b> <span data-release-date></span>. Pick your system. Your system is highlighted.</p>
+  <div class="dl-grid" data-downloads><div class="dl"><a class="file" href="https://github.com/faridmasjedi/NomadMovie/releases/latest">⬇ Open the latest release on GitHub</a></div></div>
+
+  <h3>macOS</h3>
+  <ol class="steps">
+    <li>Download the <b>.dmg</b> for your Mac: <b>Apple Silicon</b> (M1, M2, M3, M4) or <b>Intel</b>. To check, open  Apple menu → <b>About This Mac</b>.</li>
+    <li>Open the .dmg and drag <b>NomadMovie</b> into <b>Applications</b>.</li>
+    <li>The first time, <b>right-click</b> NomadMovie in Applications and choose <b>Open</b>, then <b>Open</b> again. macOS asks this once because the app isn't from the App Store. If you only see <i>Move to Trash</i>, open <b>System Settings → Privacy & Security</b>, scroll down and click <b>Open Anyway</b>.</li>
+  </ol>
+  <h3>Windows</h3>
+  <ol class="steps">
+    <li>Download and run <b>NomadMovie-…-windows-setup.exe</b>.</li>
+    <li>If Windows SmartScreen says it protected your PC, click <b>More info → Run anyway</b>.</li>
+    <li>No installer wanted? Download the <b>.zip</b>, unzip it anywhere and run <code>NomadMovie.exe</code>.</li>
+  </ol>
+  <h3>Linux</h3>
+  <ol class="steps">
+    <li><b>AppImage</b> (any distribution): make it executable (<code>chmod +x NomadMovie-*.AppImage</code>) and run it. Some distributions need <code>libfuse2</code>.</li>
+    <li><b>Debian / Ubuntu</b>: <code>sudo apt install ./NomadMovie-*.deb</code>.</li>
+  </ol>
+  <div class="info"><b>What's inside.</b> The app includes everything it needs: the editor, the local engine, ffmpeg for converting and exporting, and the fonts. AI features are optional; see <a href="#ai-setup">Connect an AI</a>.</div>
+  <h3>System requirements</h3>
+  <div class="table-wrap"><table>
+    <tr><th></th><th>Minimum</th><th>Recommended</th></tr>
+    <tr><td>System</td><td>macOS 12, Windows 10 (64-bit), Linux x86_64</td><td>macOS 14+, Windows 11</td></tr>
+    <tr><td>Memory</td><td>8 GB</td><td>16 GB for 4K and long projects</td></tr>
+    <tr><td>Graphics</td><td>Any GPU with WebGL</td><td>A GPU with WebGPU for fast AI cut-outs</td></tr>
+    <tr><td>Disk</td><td>500 MB for the app</td><td>Free space for your media and exports</td></tr>
+  </table></div>
+  <p>Older versions and release notes are on the <a href="https://github.com/faridmasjedi/NomadMovie/releases">releases page</a>.</p>
+</section>
+
+<section class="page" id="tour" data-group="Get started" data-title="The interface" data-icon="🧭">
+  <div class="kicker">Get started</div>
+  <h2>The interface</h2>
+  <p class="lead">Four areas: the library on the left, the preview in the middle, the Inspector on the right and the timeline at the bottom.</p>
+  <figure class="demo" data-gif="editing" data-caption="The main window: panels on the left, preview, Inspector and timeline."></figure>
+  <div class="cols">
+    <div class="box"><h4>Top bar</h4><ul><li>Project name and <b>project size</b> (16:9, 9:16, 1:1, 4:5, 21:9, 4K…)</li><li>Undo / redo</li><li>Status: <b>AI</b>, <b>ffmpeg</b>, <b>Whisper</b> (green = ready). Click AI to set it up.</li><li><b>New</b>, <b>Open</b> and <b>Save</b> project files</li><li><b>Export</b> and <b>⚙ Settings</b></li></ul></div>
+    <div class="box"><h4>Left panel</h4><ul><li><b>Media</b>: import and your library</li><li><b>Text</b>: title styles</li><li><b>Elements</b>: shapes, colors, gradients</li><li><b>Effects</b> and <b>Transitions</b> browsers</li><li><b>Audio</b>: voice-over recording</li><li><b>AI</b>: assistant and smart tools</li></ul></div>
+    <div class="box"><h4>Preview</h4><ul><li>Click a layer to select it; drag to move</li><li>Corner handle: resize. Side handles: stretch. Top handle: rotate.</li><li>Transport: start, frame back, play, frame forward, end, loop</li><li>Audio meter, master volume, preview quality, save frame as PNG, fullscreen</li></ul></div>
+    <div class="box"><h4>Inspector</h4><ul><li>Shows the selected clip's settings in tabs: <b>Basic</b>, <b>Animation</b>, <b>Color</b>, <b>Effects</b>, <b>Audio</b>, <b>Speed</b></li><li>With nothing selected: project settings and keyboard shortcuts</li><li>At the top: <b>★ My presets</b> and <b>Save as preset</b></li></ul></div>
+    <div class="box"><h4>Timeline</h4><ul><li>Video tracks on top, audio tracks below. The top video track is drawn in front.</li><li>Per track: show/hide, mute, lock, delete</li><li>Toolbar: undo, redo, split, delete, ripple delete, duplicate, marker, snapping, add tracks, zoom</li><li>Drag the divider above the timeline to make it taller.</li></ul></div>
+  </div>
+  <div class="tip"><b>Tip.</b> Almost everything has a tooltip: hover a button for a second to see what it does and its shortcut.</div>
+</section>
+
+<section class="page" id="first-video" data-group="Get started" data-title="Your first video" data-icon="🚀">
+  <div class="kicker">Get started</div>
+  <h2>Your first video in 5 minutes</h2>
+  <p class="lead">A short travel clip with music, a title, a transition and a color look, exported as MP4.</p>
+  <ol class="steps">
+    <li><b>Import.</b> In <b>Media</b>, drop your clips, photos and a music file onto the import box, or click it to browse. Any format works. See <a href="#import">Import</a>.</li>
+    <li><b>Add to the timeline.</b> Double-click each clip (or drag it to a track). Clips line up one after another. Music goes onto an audio track.</li>
+    <li><b>Trim.</b> Drag the left or right edge of a clip to shorten it. Move the playhead and press <kbd>S</kbd> to split, then delete the part you don't want with <kbd>Shift</kbd>+<kbd>Delete</kbd> to close the gap.</li>
+    <li><b>Transition.</b> Open <b>Transitions</b> and drag <i>Cross Dissolve</i> (or anything you like) onto the cut between two clips.</li>
+    <li><b>Title.</b> Open <b>Text</b>, click a style, type your title in the Inspector and pick an <b>In animation</b> on the Animation tab.</li>
+    <li><b>Look.</b> Select a clip, open the <b>Color</b> tab and click a look such as <i>Cinematic</i>. Save it as a preset to reuse it on the other clips.</li>
+    <li><b>Music.</b> Drag the fade handles on the music clip to fade it in and out. If people speak, right-click the music → <b>Smart audio → Auto-duck under speech</b>.</li>
+    <li><b>Export.</b> Click <b>Export</b>, keep <b>MP4</b> and <b>High</b>, and click <b>Render</b>. Choose where to save it.</li>
+  </ol>
+  <div class="tip"><b>Shortcut.</b> With an AI connected, steps 4–7 can be one sentence in the <b>AI</b> tab: <i>“add cross dissolves between the clips, a title ‘Lisbon 2026’ at the start, a cinematic look and fade the music in and out.”</i></div>
+</section>
+
+<!-- ============================== EDIT ============================== -->
+
+<section class="page" id="import" data-group="Edit" data-title="Import any format" data-icon="📥">
+  <div class="kicker">Edit</div>
+  <h2>Import any video, audio or photo</h2>
+  <p class="lead">Drop files on the import box in <b>Media</b> or click it to browse. Files the editor can't play directly are converted for you, with progress shown at the top.</p>
+  <figure class="demo" data-gif="import" data-caption="Importing an MKV, an iPhone HEIC photo, an MP4, music and a JPG, then adding them to the timeline."></figure>
+  <h3>Supported formats</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Type</th><th>Formats</th></tr>
+    <tr><td>Video</td><td>MP4, MOV, MKV, AVI, WMV, FLV, MPEG/MPG, MTS/M2TS/TS (camcorders), WebM, 3GP, MXF, OGV, VOB, DV, RM/RMVB, DivX/XviD. Codecs: H.264, HEVC/H.265, ProRes, DNxHD, AV1, VP9, MPEG-2/4, VC-1.</td></tr>
+    <tr><td>Audio</td><td>MP3, WAV, FLAC, AAC/M4A, OGG, OPUS, WMA, AIFF, AC-3, ALAC, APE, AMR, CAF, MKA</td></tr>
+    <tr><td>Photos</td><td>JPG, PNG, GIF, WebP, BMP, SVG, AVIF, HEIC/HEIF (iPhone), RAW camera files (CR2, CR3, NEF, ARW, DNG, ORF, RW2, RAF…), PSD, TIFF, TGA, EXR</td></tr>
+    <tr><td>Animation</td><td>Lottie (.json), see <a href="#lottie">Lottie animations</a></td></tr>
+  </table></div>
+  <h3>How conversion works</h3>
+  <ul>
+    <li><b>Plays directly</b> (MP4, MOV and WebM with common codecs, most audio and photos): used as is.</li>
+    <li><b>Repackaged</b> (for example MKV, MTS or MOV with H.264 or HEVC): the video is moved into an MP4 without re-encoding. No quality loss, about half a second for a short clip.</li>
+    <li><b>Converted</b> (AVI, WMV, ProRes, MPEG-2…): re-encoded to high-quality H.264 (CRF 17). Sound becomes AAC; audio-only files become lossless FLAC.</li>
+    <li><b>Photos</b> like HEIC, RAW and PSD are converted to JPG, or PNG when they have transparency.</li>
+  </ul>
+  <div class="info"><b>Your originals are never changed.</b> The converted copy is stored inside the project.</div>
+  <h3>Using your library</h3>
+  <ul>
+    <li><b>Double-click</b> a clip or click its <b>+</b> to add it to the end of the timeline. Audio goes in at the playhead.</li>
+    <li><b>Drag</b> a clip to a track and position.</li>
+    <li>Filter with <b>All / Video / Audio / Image</b>. <b>×</b> deletes a file and its clips.</li>
+    <li><b>Import photos</b> opens a picker that shows only images. <b>Photo slideshow</b> puts all photos on the timeline (see <a href="#slideshow">Photo slideshow</a>).</li>
+  </ul>
+  <div class="warn"><b>Limits.</b> Only the first audio track of multi-language videos is used, and embedded subtitles aren't imported. Very large files (several GB) use a lot of memory because their sound is analysed for the waveform.</div>
+</section>
+
+<section class="page" id="timeline" data-group="Edit" data-title="Timeline editing" data-icon="✂">
+  <div class="kicker">Edit</div>
+  <h2>Timeline editing</h2>
+  <p class="lead">Arrange clips on as many video and audio tracks as you need. Every change can be undone.</p>
+  <figure class="demo" data-gif="editing" data-caption="Moving the playhead, splitting, trimming an edge, snapping a clip into place, ripple delete and undo."></figure>
+  <h3>Basics</h3>
+  <div class="table-wrap"><table>
+    <tr><th>To…</th><th>Do this</th></tr>
+    <tr><td>Move the playhead</td><td>Click or drag on the ruler. <kbd>←</kbd>/<kbd>→</kbd> step one frame, <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> one second, <kbd>Home</kbd>/<kbd>End</kbd> jump to start or end.</td></tr>
+    <tr><td>Select</td><td>Click a clip. <kbd>Shift</kbd>-click to add more. <kbd>Ctrl/⌘</kbd>+<kbd>A</kbd> selects all, <kbd>Esc</kbd> clears.</td></tr>
+    <tr><td>Move</td><td>Drag a clip, also to another track. With snapping on (magnet, <kbd>N</kbd>), clips snap to edges, the playhead and markers.</td></tr>
+    <tr><td>Trim</td><td>Drag the left or right edge of a clip.</td></tr>
+    <tr><td>Split</td><td>Put the playhead on the clip and press <kbd>S</kbd> (or the split button). Splits the selected clips, or every clip under the playhead when nothing is selected.</td></tr>
+    <tr><td>Delete</td><td><kbd>Delete</kbd> leaves a gap. <kbd>Shift</kbd>+<kbd>Delete</kbd> (ripple delete) closes the gap.</td></tr>
+    <tr><td>Copy, paste, duplicate</td><td><kbd>Ctrl/⌘</kbd>+<kbd>C</kbd>, <kbd>Ctrl/⌘</kbd>+<kbd>V</kbd> (pastes at the playhead), <kbd>Ctrl/⌘</kbd>+<kbd>D</kbd>. <kbd>Ctrl/⌘</kbd>+<kbd>X</kbd> cuts.</td></tr>
+    <tr><td>Markers</td><td><kbd>M</kbd> or the marker button adds one at the playhead. Use them for beats, notes, or to cut on.</td></tr>
+    <tr><td>Zoom</td><td><kbd>+</kbd>/<kbd>-</kbd>, the zoom slider, <kbd>Ctrl/⌘</kbd>+scroll, or <b>⇔</b> to fit the whole project.</td></tr>
+    <tr><td>Undo / redo</td><td><kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> / <kbd>Ctrl/⌘</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>. History is unlimited.</td></tr>
+  </table></div>
+  <h3>Tracks</h3>
+  <ul>
+    <li><b>+ Video track</b> and <b>+ Audio track</b> add tracks. Rename a track by clicking its name.</li>
+    <li>Upper video tracks are drawn in front of lower ones, so put titles and stickers on top.</li>
+    <li>Each track can be hidden 👁, muted 🔊, locked 🔒 (no edits) or deleted ×.</li>
+    <li>Clips show their effects as small chips and their transitions as badges on the cuts. Click either to edit it.</li>
+  </ul>
+  <h3>Speed and duration</h3>
+  <p>Select a video or audio clip and open the <b>Speed</b> tab: 0.1× to 8×, with quick buttons from ×0.25 to ×8. The clip gets shorter or longer to match. Use 0.5× or less for slow motion.</p>
+</section>
+
+<section class="page" id="right-click" data-group="Edit" data-title="Right-click menu" data-icon="🖱">
+  <div class="kicker">Edit</div>
+  <h2>The right-click menu</h2>
+  <p class="lead">Right-click any clip on the timeline for the most common edits, without hunting through panels.</p>
+  <figure class="demo" data-gif="right-click" data-caption="Right-click → Speed 2×, Zoom & pan → Punch in, and a quick Cube transition."></figure>
+  <div class="table-wrap"><table>
+    <tr><th>Item</th><th>What it does</th></tr>
+    <tr><td>Split at playhead · Copy · Paste · Duplicate</td><td>The usual editing commands.</td></tr>
+    <tr><td>Speed</td><td>0.25× to 8× in one click.</td></tr>
+    <tr><td>Volume · Audio fade in · Audio fade out</td><td>Mute or set 25–200 % volume; fades of 0.5 to 3 seconds.</td></tr>
+    <tr><td>Smart audio</td><td>Remove silences, normalize loudness, auto-duck under speech, beats → markers.</td></tr>
+    <tr><td>Zoom & pan</td><td>Zoom in or out at the playhead, punch in and back, Ken Burns, pan left or right, more options, clear.</td></tr>
+    <tr><td>Transition in / out</td><td>Ten favorites (Cross Dissolve, Dip to Black/White, Push, Wipe, Zoom, Whip Pan, Flash, Cube, Glitch) or None.</td></tr>
+    <tr><td>Fit</td><td>Fit, Fill (crop) or Stretch the picture to the frame.</td></tr>
+    <tr><td>Reset position & size</td><td>Back to centered, 100 %, no rotation, no zoom & pan.</td></tr>
+    <tr><td>Effects</td><td>Edit an effect, add one, remove all, reset color.</td></tr>
+    <tr><td>Freeze frame (2s)</td><td>Holds the current frame for 2 seconds and pushes the rest of the clip back.</td></tr>
+    <tr><td>Detect scenes</td><td>Adds a marker at every scene change in the clip.</td></tr>
+    <tr><td>Detach audio</td><td>Moves the clip's sound to its own audio track.</td></tr>
+    <tr><td>Rename · Properties · Delete · Ripple delete</td><td>Housekeeping.</td></tr>
+  </table></div>
+  <p>Transition badges on the timeline have their own right-click menu: edit, change the duration, replace with another transition, or remove.</p>
+</section>
+
+<section class="page" id="project" data-group="Edit" data-title="Project size & aspect" data-icon="📐">
+  <div class="kicker">Edit</div>
+  <h2>Project size and aspect ratio</h2>
+  <p class="lead">Choose the shape of your video from the menu in the top bar. Everything already on the timeline is repositioned to fit.</p>
+  <figure class="demo" data-gif="aspect" data-caption="Switching the same edit between 16:9, 9:16 for Reels and 1:1."></figure>
+  <div class="table-wrap"><table>
+    <tr><th>Preset</th><th>Size</th><th>Use it for</th></tr>
+    <tr><td>16:9 Landscape (1080p)</td><td>1920×1080</td><td>YouTube, most video</td></tr>
+    <tr><td>16:9 (720p)</td><td>1280×720</td><td>Smaller, faster</td></tr>
+    <tr><td>4K</td><td>3840×2160</td><td>High resolution</td></tr>
+    <tr><td>9:16 Stories/Reels</td><td>1080×1920</td><td>TikTok, Reels, Shorts</td></tr>
+    <tr><td>1:1 Square</td><td>1080×1080</td><td>Feeds</td></tr>
+    <tr><td>4:5 Instagram</td><td>1080×1350</td><td>Instagram posts</td></tr>
+    <tr><td>21:9 Cinematic</td><td>2560×1080</td><td>Widescreen look</td></tr>
+  </table></div>
+  <p>For any other size, deselect all clips and type the <b>Width</b> and <b>Height</b> in the Inspector's project settings. There you can also set the <b>frame rate</b> (24, 25, 30, 50 or 60 fps) and the <b>background color</b>.</p>
+  <div class="tip"><b>Tip.</b> After switching to vertical, right-click your clips → <b>Fit → Fill (crop)</b> so they cover the whole frame, or ask the AI: <i>“make it a Reel”</i>.</div>
+</section>
+
+<!-- ============================== CREATE ============================== -->
+
+<section class="page" id="text" data-group="Create" data-title="Text & titles" data-icon="🔤">
+  <div class="kicker">Create</div>
+  <h2>Text and titles</h2>
+  <p class="lead">Click a style in the <b>Text</b> panel to add a title at the playhead, then make it yours in the Inspector.</p>
+  <figure class="demo" data-gif="text" data-caption="Adding a Neon title, typing the text, changing the font and size, and a typewriter animation."></figure>
+  <h3>Styles</h3>
+  <div class="chips"><span class="chip">Main title</span><span class="chip">Bold display</span><span class="chip">Subtitle text</span><span class="chip">Caption</span><span class="chip">Neon</span><span class="chip">Cinematic</span><span class="chip">Classic</span><span class="chip">Typewriter</span><span class="chip">Label</span><span class="chip">Outline</span></div>
+  <h3>Text settings (Basic tab)</h3>
+  <ul>
+    <li><b>Text</b>, with any number of lines. Right-to-left languages work too.</li>
+    <li><b>Font</b>: Inter, Montserrat, Bebas Neue, Playfair Display, Roboto Mono, Vazirmatn, Lalezar, Arial, Georgia. They're built in, so exports look the same on every computer.</li>
+    <li><b>Size</b>, <b>Color</b>, <b>Bold</b>, <b>Italic</b>, alignment</li>
+    <li><b>Letter spacing</b> and <b>Line height</b></li>
+    <li><b>Stroke</b> width and color, <b>Shadow</b> size and color, <b>Background</b> box color</li>
+  </ul>
+  <h3>Animations (Animation tab)</h3>
+  <p>Pick an <b>In animation</b> and an <b>Out animation</b>, each with its own duration:</p>
+  <div class="chips"><span class="chip">Fade</span><span class="chip">Slide up / down / left / right</span><span class="chip">Pop</span><span class="chip">Zoom</span><span class="chip">Bounce</span><span class="chip">Rotation</span><span class="chip">Typewriter</span><span class="chip">Word by word</span><span class="chip">Blur</span><span class="chip">Elastic</span></div>
+  <p>You can also drag an animation from the <b>Transitions</b> panel onto a clip: the left half sets the In animation, the right half the Out animation.</p>
+  <div class="tip"><b>Tip.</b> When you add a title, the playhead is on its first frame, where an In animation hasn't started yet. Move the playhead a little to see it while you edit.</div>
+</section>
+
+<section class="page" id="elements" data-group="Create" data-title="Shapes & backgrounds" data-icon="◆">
+  <div class="kicker">Create</div>
+  <h2>Shapes, colors and gradients</h2>
+  <p class="lead">The <b>Elements</b> panel adds shapes, solid color backgrounds and full-frame gradients.</p>
+  <figure class="demo" data-gif="elements" data-caption="A gradient background, a star and a heart dragged into place, and a title."></figure>
+  <ul>
+    <li><b>Shapes</b>: rectangle, circle, triangle, star, heart, arrow, line. They pop in and fade out by default.</li>
+    <li><b>Shape settings</b>: type, width, height, fill color, a second color for a gradient, corner radius (rectangles), stroke width and color.</li>
+    <li><b>Color backgrounds</b>: ten solid colors that fill the frame.</li>
+    <li><b>Gradients</b>: six two-color backgrounds.</li>
+    <li>Backgrounds go on the lowest free track, behind everything else.</li>
+  </ul>
+  <div class="tip"><b>Custom graphics.</b> Ask the AI for stickers and icons: <i>“make a red subscribe button with a bell”</i>. It draws them as sharp SVG graphics you can resize freely.</div>
+  <h3>Position, size and blend (Basic tab)</h3>
+  <ul>
+    <li><b>X</b>, <b>Y</b> (center of the layer), <b>Scale</b>, <b>Rotation</b>, <b>Opacity</b>, <b>Flip</b> and <b>Center</b>.</li>
+    <li><b>Size (px)</b>: type an exact width and height. Unlock 🔓 to stretch freely. Quick buttons: Fit width, Fit height, Fill frame, 50 %, 100 %.</li>
+    <li><b>Blend</b>: Normal, Multiply, Screen, Overlay, Lighten, Darken, Color Dodge, Color Burn, Hard Light, Soft Light, Difference, Exclusion, Hue, Saturation, Color, Luminosity, Add.</li>
+    <li>For videos and photos: <b>Fit mode</b> (Fit, Fill, Stretch) and <b>Crop</b> from each side.</li>
+  </ul>
+</section>
+
+<section class="page" id="effects" data-group="Create" data-title="Effects" data-icon="✨">
+  <div class="kicker">Create</div>
+  <h2>Effects</h2>
+  <p class="lead">90 GPU effects in 9 categories. Hover a tile to see it move, then drag it onto a clip.</p>
+  <figure class="demo" data-gif="effects" data-caption="Previewing effects, dropping VHS Tracking onto a clip, changing its amount and adding a light sweep."></figure>
+  <h3>Adding and adjusting effects</h3>
+  <ol class="steps">
+    <li>Open <b>Effects</b>. Search or pick a category.</li>
+    <li><b>Drag</b> an effect onto a clip, or select clips and <b>click</b> the effect.</li>
+    <li>The Inspector opens the clip's <b>Effects</b> tab. Every effect has an <b>Amount</b> and, depending on the effect, settings such as radius, speed, angle, center or colors.</li>
+    <li>Effects stack from top to bottom: use <b>↑</b> to reorder, the switch to turn one off, <b>×</b> to remove it.</li>
+  </ol>
+  <p>Effects are listed as chips on the clip in the timeline; click a chip to jump to its settings. Dropping an effect on an empty part of a track creates an <a href="#effect-layers">effect layer</a> instead.</p>
+  <h3>Categories</h3>
+  <div class="cols">
+    <div class="box"><h4>Blur</h4><p>Gaussian, zoom, motion and spin blur, tilt-shift, mosaic, censor box, vignette blur.</p></div>
+    <div class="box"><h4>Distortion</h4><p>Wave, water ripple, swirl, fisheye, pinch, kaleidoscope, mirror, tile, heat haze, underwater, barrel lens, shockwave, liquid warp, glass ripple.</p></div>
+    <div class="box"><h4>Glitch</h4><p>Digital glitch, chromatic aberration, block and scan-line glitch, TV static, signal loss, RGB shake, VHS tracking, pixel sort, slice glitch.</p></div>
+    <div class="box"><h4>Retro</h4><p>VHS, old film, 8mm, CRT monitor, dust & scratches, film grain.</p></div>
+    <div class="box"><h4>Light</h4><p>Light leak, bokeh lights, lens flare, glow, light rays, strobe, neon edges, deep glow, anamorphic streaks, sun flare, light sweep, film halation.</p></div>
+    <div class="box"><h4>Stylize</h4><p>Cartoon, pencil sketch, emboss, halftone, posterize, oil paint, pixel art, sharpen, outline, drop shadow, neon glow for cut-outs, crystallize, frosted glass, prism ghost.</p></div>
+    <div class="box"><h4>Color</h4><p>Duotone, color pop, thermal camera, night vision, hue cycle, bleach bypass, cross process, teal & orange, film emulation, vintage fade, split toning, black & white film.</p></div>
+    <div class="box"><h4>Weather & Overlays</h4><p>Rain, snow, fog, sparkles, rounded frame, scan lines, floating dust, confetti, camera viewfinder (REC), letterbox.</p></div>
+    <div class="box"><h4>Camera</h4><p>Handheld camera, earthquake, breathing zoom, impact shake, rack focus, camera shake, zoom pulse.</p></div>
+  </div>
+  <h3>All effects</h3>
+  <p>Every effect, animated. Search by name or filter by category.</p>
+  <div data-catalog="effects"></div>
+</section>
+
+<section class="page" id="effect-layers" data-group="Create" data-title="Effect layers" data-icon="🧱">
+  <div class="kicker">Create</div>
+  <h2>Effect layers</h2>
+  <p class="lead">An effect layer applies its effects and color settings to everything on the tracks below it, for as long as it lasts, like an adjustment layer in After Effects.</p>
+  <figure class="demo" data-gif="effect-layer" data-caption="Dropping Black & White Film on an empty track creates an effect layer; stretched over the cut, it affects both clips."></figure>
+  <ol class="steps">
+    <li>Drag an effect or a look onto an <b>empty spot</b> of a track above your clips. Or click an effect with nothing selected, or use <b>+ Empty effect layer</b>.</li>
+    <li>Drag its edges to cover the part of the video you want.</li>
+    <li>Add more effects and color settings to it like any clip.</li>
+    <li>To limit it to one area, such as blurring a face, give the layer a <a href="#masks">mask</a>. <b>Invert</b> affects everything outside the mask.</li>
+  </ol>
+</section>
+
+<section class="page" id="transitions" data-group="Create" data-title="Transitions" data-icon="⇄">
+  <div class="kicker">Create</div>
+  <h2>Transitions</h2>
+  <p class="lead">155 GPU transitions in 12 categories. Drop one onto a cut and it blends the two clips, centered on the cut.</p>
+  <figure class="demo" data-gif="transitions" data-caption="Previewing transitions, dropping Cube and Glitch Displace onto two cuts, and playing them."></figure>
+  <h3>Where you drop it matters</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Drop on…</th><th>Result</th></tr>
+    <tr><td>The end of a clip (right part), with a clip right after it</td><td>A transition on the cut between them.</td></tr>
+    <tr><td>The start of a clip (left part)</td><td>Transition in: from the clip before, or a reveal from black if there's nothing before.</td></tr>
+    <tr><td>The middle of a clip</td><td>Both in and out.</td></tr>
+    <tr><td>The end of the last clip</td><td>Transition out: hides the clip at its end.</td></tr>
+  </table></div>
+  <h3>Editing</h3>
+  <ul>
+    <li>Transitions appear as <b>⇄ badges</b> on the cuts. Drag a badge's edges to change its length.</li>
+    <li>Click a badge to open it in the Inspector (<b>Animation</b> tab → <i>Transition in / out</i>), where you can choose any of the 155 and set the duration.</li>
+    <li>Right-click a badge: edit, duration, replace with another, remove.</li>
+  </ul>
+  <h3>All transitions</h3>
+  <div data-catalog="transitions"></div>
+</section>
+
+<section class="page" id="color" data-group="Create" data-title="Color & looks" data-icon="🎨">
+  <div class="kicker">Create</div>
+  <h2>Color and looks</h2>
+  <p class="lead">Select a clip and open the <b>Color</b> tab: one-click looks, then fine-tuning.</p>
+  <figure class="demo" data-gif="color" data-caption="Trying looks, then adjusting temperature, saturation and vignette by hand."></figure>
+  <h3>Looks</h3>
+  <div class="chips"><span class="chip">Original</span><span class="chip">Cinematic</span><span class="chip">Teal & orange</span><span class="chip">Vintage</span><span class="chip">B&W</span><span class="chip">Noir</span><span class="chip">Warm</span><span class="chip">Cool</span><span class="chip">Vivid</span><span class="chip">Faded</span><span class="chip">Dramatic</span><span class="chip">Dreamy</span><span class="chip">Sunset</span><span class="chip">Cyberpunk</span><span class="chip">Matrix</span><span class="chip">Invert</span></div>
+  <h3>Color adjust</h3>
+  <p>Brightness, Contrast, Saturation, Temperature, Tint, Hue, Vignette, Blur, Grayscale, Sepia, Invert. <b>Double-click a slider's name</b> to reset it, or use <b>Reset all</b>.</p>
+  <div class="tip"><b>Let the AI look.</b> In the AI tab, turn on <b>Send frame</b> and ask <i>“color grade this like a film”</i>. The assistant sees the current frame and sets the values.</div>
+  <p>For more stylized grading, the <a href="#effects">Color effects</a> add film emulation, split toning, teal & orange and black & white film.</p>
+</section>
+
+<section class="page" id="chroma" data-group="Create" data-title="Green screen" data-icon="🟩">
+  <div class="kicker">Create</div>
+  <h2>Green screen (chroma key)</h2>
+  <p class="lead">Remove a background color so the layers below show through.</p>
+  <figure class="demo" data-gif="chroma" data-caption="Keying out the green so the clip floats over another shot."></figure>
+  <ol class="steps">
+    <li>Put the background clip on a lower track and the green-screen clip above it.</li>
+    <li>Select the green-screen clip. In the <b>Basic</b> tab, open <b>Chroma key (green screen)</b> and turn on <b>Enabled</b>.</li>
+    <li>Set <b>Key color</b> to the background color (green by default; blue works too).</li>
+    <li>Raise <b>Threshold</b> until the background disappears; use <b>Softness</b> for smoother edges.</li>
+  </ol>
+  <div class="tip"><b>No green screen?</b> Use <a href="#ai-cutout">AI cut-out</a> to separate a person from any background.</div>
+</section>
+
+<section class="page" id="masks" data-group="Create" data-title="Masks" data-icon="⭕">
+  <div class="kicker">Create</div>
+  <h2>Masks</h2>
+  <p class="lead">Keep only part of a picture, or remove a part, by drawing on the preview.</p>
+  <figure class="demo" data-gif="masks" data-caption="Drawing an ellipse mask, feathering the edge and inverting it."></figure>
+  <ol class="steps">
+    <li>Select a clip and open <b>Mask & cut-out</b> in the <b>Basic</b> tab.</li>
+    <li>Choose a tool and draw on the preview: <b>▭ Box</b> or <b>◯ Ellipse</b> (drag), <b>✎ Freehand</b> (draw the outline), <b>⬠ Points</b> (click point by point).</li>
+    <li>Adjust with <b>✏ Edit outline</b>: drag the points.</li>
+  </ol>
+  <div class="table-wrap"><table>
+    <tr><th>Setting</th><th>What it does</th></tr>
+    <tr><td>Enabled</td><td>Turns the mask on or off without deleting it.</td></tr>
+    <tr><td>Invert</td><td>Removes the inside instead of keeping it.</td></tr>
+    <tr><td>Curved edges</td><td>Smooths the outline between points.</td></tr>
+    <tr><td>Feather</td><td>Softens the edge, 0 to 200 px.</td></tr>
+    <tr><td>Expand</td><td>Grows or shrinks the outline, −100 to 100 px.</td></tr>
+    <tr><td>Animate ◆</td><td>Adds a mask key at the playhead. With keys, editing the outline sets a key and the mask moves smoothly between keys. ‹ › jump between keys.</td></tr>
+    <tr><td>⛶ Crop to mask</td><td>Cuts the frame down to the box around the mask.</td></tr>
+  </table></div>
+  <p>On an <a href="#effect-layers">effect layer</a>, the mask limits the effect to an area: blur a face, brighten the sky, or with Invert, darken everything else.</p>
+</section>
+
+<section class="page" id="ai-cutout" data-group="Create" data-title="AI cut-out" data-icon="🪄">
+  <div class="kicker">Create</div>
+  <h2>Cut out a person with one click</h2>
+  <p class="lead">Click a person or object and it's outlined for you. <b>Track</b> follows it through the clip. It runs on your computer; nothing is uploaded.</p>
+  <figure class="demo" data-gif="ai-cutout" data-caption="Select a subject with AI, click the person, then Track forward (sped up). The person now walks over a gradient."></figure>
+  <ol class="steps">
+    <li>Select a video or photo clip. In <b>Mask & cut-out</b>, click <b>✨ Select a subject with AI</b>.</li>
+    <li>Click the person or object in the preview. A mask appears around it. Click again elsewhere to refine.</li>
+    <li>For videos, choose how often to look (<b>Every frame</b> to <b>Every 5th frame</b>) and click <b>Track forward ▶</b> (or <b>◀ Track back</b>). <b>■ Stop</b> stops any time.</li>
+    <li>Use <b>Feather</b> and <b>Expand</b> for a cleaner edge, or <b>Invert</b> to remove the subject and keep the background.</li>
+  </ol>
+  <div class="info"><b>Under the hood.</b> NomadMovie uses <a href="https://huggingface.co/onnx-community/EdgeTAM-ONNX">EdgeTAM</a>, a fast version of Meta's Segment Anything 2. The model (about 40 MB) downloads once from Hugging Face the first time you use it. It runs on your GPU with WebGPU, or on the processor otherwise. Expect about one second per frame on a 2019 laptop.</div>
+  <div class="tip"><b>Make it pop.</b> Add <i>Outer Glow (Neon Cut-out)</i>, <i>Outline / Stroke</i> or <i>Drop Shadow</i> from Effects → Stylize to the cut-out clip.</div>
+</section>
+
+<!-- ============================== ANIMATE ============================== -->
+
+<section class="page" id="keyframes" data-group="Animate" data-title="Keyframes" data-icon="◆">
+  <div class="kicker">Animate</div>
+  <h2>Keyframes</h2>
+  <p class="lead">Animate anything over time: position, scale, rotation, opacity, blur, stretch and volume.</p>
+  <figure class="demo" data-gif="keyframes" data-caption="Keyframing X, Y and rotation, then dragging the star on the preview at new times. The keyframes are made automatically."></figure>
+  <ol class="steps">
+    <li>Select a clip and move the playhead to where the motion should start.</li>
+    <li>Click <b>◆</b> next to a property (X, Y, Scale, Rotation, Opacity in <b>Basic</b>; Blur, Scale X, Scale Y in <b>Animation → Keyframes</b>).</li>
+    <li>Move the playhead and change the value: with the slider, or by <b>dragging the layer on the preview</b>. Once a property has keyframes, every change makes a new keyframe at the playhead.</li>
+    <li>Fine-tune in <b>Animation → Keyframes</b>: click a time to jump there, type an exact value, choose the easing, delete with ×, or <b>Clear all</b>.</li>
+  </ol>
+  <h3>Easing curves</h3>
+  <div class="chips"><span class="chip">Linear</span><span class="chip">Ease in</span><span class="chip">Ease out</span><span class="chip">Smooth</span><span class="chip">Back</span><span class="chip">Bounce</span><span class="chip">Elastic</span><span class="chip">Hold</span></div>
+  <p>Keyframes show as small diamonds on the clip in the timeline. The ◆ button is filled when there's a keyframe at the playhead, and outlined when the property is animated elsewhere.</p>
+</section>
+
+<section class="page" id="motion-presets" data-group="Animate" data-title="Motion presets" data-icon="🎈">
+  <div class="kicker">Animate</div>
+  <h2>Motion presets</h2>
+  <p class="lead">One click makes a layer move by itself for as long as the clip lasts. No keyframes, and you can combine them.</p>
+  <figure class="demo" data-gif="motion-presets" data-caption="Float and Wiggle together, then Float and Jelly."></figure>
+  <div class="table-wrap"><table>
+    <tr><th>Preset</th><th>Motion</th></tr>
+    <tr><td>Float</td><td>Bobs gently up and down</td></tr>
+    <tr><td>Sway</td><td>Rocks side to side. Anchor at the bottom for plants, at the top for hanging things.</td></tr>
+    <tr><td>Wiggle</td><td>Wanders randomly, like a hand-held or living thing</td></tr>
+    <tr><td>Bounce</td><td>Hops up and lands, again and again</td></tr>
+    <tr><td>Pulse</td><td>Grows and shrinks smoothly</td></tr>
+    <tr><td>Heartbeat</td><td>A double beat, then rest</td></tr>
+    <tr><td>Spin</td><td>Turns continuously (speed = turns per second)</td></tr>
+    <tr><td>Pendulum</td><td>Swings like a pendulum. Put the anchor at the top.</td></tr>
+    <tr><td>Jelly</td><td>Wobbly squash and stretch</td></tr>
+    <tr><td>Orbit</td><td>Circles around its position</td></tr>
+    <tr><td>Shake</td><td>Fast jitter: nervous, cold or excited</td></tr>
+    <tr><td>Blink</td><td>Fades out and back in</td></tr>
+    <tr><td>Drift</td><td>Slowly moves across (a negative amount goes the other way)</td></tr>
+  </table></div>
+  <p>Find them in <b>Animation → Motion presets</b>. Each one has <b>Speed</b>, <b>Amount</b> and <b>Offset</b> (start later, handy to make several layers move out of step). Click the chip again to remove it.</p>
+</section>
+
+<section class="page" id="illustrations" data-group="Animate" data-title="Animate illustrations" data-icon="🤖">
+  <div class="kicker">Animate</div>
+  <h2>Animate the parts of an illustration</h2>
+  <p class="lead">Turn a flat SVG drawing into a puppet: split it into parts, choose what each part turns around, and link the parts together, like in After Effects.</p>
+  <figure class="demo" data-gif="animate-parts" data-caption="Split into layers, pick the shoulder as the arm's anchor point, then Pendulum on the arm, Wiggle on the head and Pulse on the antenna."></figure>
+  <ol class="steps">
+    <li>Import an <b>.svg</b> illustration and add it to the timeline.</li>
+    <li>In the <b>Basic</b> tab, click <b>✂ Split into layers</b>. Each top-level part (group) goes on its own track, named after its id or Inkscape/Illustrator layer name.</li>
+    <li>Click a part on the preview to select it. Under <b>Anchor point</b>, pick one of the 9 positions or click <b>🎯 Pick</b> and click the exact point it should turn around: a shoulder, a stem, a hinge.</li>
+    <li>Under <b>Parent</b>, choose the part it should follow (hand → arm → body). It then moves, turns and scales with its parent.</li>
+    <li>Animate with <a href="#motion-presets">motion presets</a> or <a href="#keyframes">keyframes</a>.</li>
+  </ol>
+  <div class="info"><b>Note.</b> After splitting, all parts follow the bottom part so that moving it moves the whole drawing. Change any part's Parent to build your own hierarchy.</div>
+  <div class="tip"><b>With AI.</b> <i>“Split the character into layers and make the arm wave.”</i></div>
+</section>
+
+<section class="page" id="lottie" data-group="Animate" data-title="Lottie animations" data-icon="🌟">
+  <div class="kicker">Animate</div>
+  <h2>Lottie animations</h2>
+  <p class="lead">Lottie is the format After Effects animations are exported to with Bodymovin, and what <a href="https://lottiefiles.com">LottieFiles</a> offers by the thousand. Drop a <code>.json</code> file in and it plays on the timeline.</p>
+  <figure class="demo" data-gif="lottie" data-caption="A Lottie animation layered over video."></figure>
+  <ul>
+    <li>Lottie clips loop, so make them as long as you like.</li>
+    <li>The <b>Speed</b> tab changes their speed. Position, size, effects and masks work like any layer.</li>
+    <li>Preview and export draw exactly the same frames.</li>
+  </ul>
+  <div class="info"><b>Safe playback.</b> Expressions (JavaScript inside a Lottie file) are ignored, so a file can't run code. Most animations don't use them.</div>
+</section>
+
+<section class="page" id="zoom-pan" data-group="Animate" data-title="Zoom & pan" data-icon="🔍">
+  <div class="kicker">Animate</div>
+  <h2>Zoom and pan inside a clip</h2>
+  <p class="lead">Camera moves without a camera: zoom into exactly the point you choose, punch in for emphasis, or pan across a photo.</p>
+  <figure class="demo" data-gif="zoom-pan" data-caption="Picking a point on the preview and zooming into it."></figure>
+  <ol class="steps">
+    <li>Select a clip, open <b>Animation → Zoom & pan</b>.</li>
+    <li>Choose a <b>Move</b>: Zoom in, Zoom out, Punch in & back, Ken Burns, Pan left, right, up or down.</li>
+    <li>Click <b>🎯 Pick on preview</b> and click the point to zoom into. It stays fixed while everything else grows around it.</li>
+    <li>Set <b>Zoom</b> (1.05× to 4×), where it <b>starts</b> (playhead or clip start), the <b>duration</b> or <b>until the end of the clip</b>, and the <b>easing</b>.</li>
+    <li>Click <b>Apply move</b>. It creates keyframes you can fine-tune. <b>Clear zoom & pan</b> removes them.</li>
+  </ol>
+  <p>Faster: right-click a clip → <b>Zoom & pan</b> → <i>Zoom in here</i>, <i>Punch in & back</i> or <i>Ken Burns</i>.</p>
+</section>
+
+<section class="page" id="slideshow" data-group="Animate" data-title="Photo slideshow" data-icon="🖼">
+  <div class="kicker">Animate</div>
+  <h2>Photo slideshow</h2>
+  <p class="lead">Turn a folder of photos into a moving slideshow in one click.</p>
+  <figure class="demo" data-gif="slideshow" data-caption="Photo slideshow: every photo with a gentle Ken Burns move and cross dissolves."></figure>
+  <ol class="steps">
+    <li>In <b>Media</b>, click <b>🖼 Import photos</b> and select your photos (HEIC and RAW work too).</li>
+    <li>Click <b>🎞 Photo slideshow</b>. All photos go on the timeline, 3 seconds each, with cross dissolves and a slow zoom.</li>
+    <li>Add music, then change durations, transitions or moves like any clips.</li>
+  </ol>
+</section>
+
+<!-- ============================== AUDIO ============================== -->
+
+<section class="page" id="audio" data-group="Audio" data-title="Volume & fades" data-icon="🎚">
+  <div class="kicker">Audio</div>
+  <h2>Volume, fades and keyframes on the timeline</h2>
+  <p class="lead">Every clip with sound has a volume line you can drag directly, with fade handles at both ends.</p>
+  <figure class="demo" data-gif="audio-line" data-caption="Lowering the volume line, dragging the fade-in and fade-out handles, and adding volume keyframes to dip the music."></figure>
+  <div class="table-wrap"><table>
+    <tr><th>To…</th><th>Do this on the clip</th></tr>
+    <tr><td>Change the volume</td><td>Drag the line up or down. The tooltip shows the level in dB.</td></tr>
+    <tr><td>Fade in / out</td><td>Drag the small square handles at the top corners inward.</td></tr>
+    <tr><td>Add a volume keyframe</td><td>Double-click the line.</td></tr>
+    <tr><td>Move / delete a keyframe</td><td>Drag the dot / double-click it.</td></tr>
+  </table></div>
+  <p>The same settings are in the Inspector's <b>Audio</b> tab: <b>Volume</b> (0–3×), <b>Volume (keyframe)</b>, <b>Fade in</b>, <b>Fade out</b>, <b>Pan</b> (left/right) and <b>Mute</b>.</p>
+</section>
+
+<section class="page" id="audio-tools" data-group="Audio" data-title="Audio effects & smart tools" data-icon="🎛">
+  <div class="kicker">Audio</div>
+  <h2>Audio effects and smart tools</h2>
+  <p class="lead">Clean up voices, shape the sound and let the app do the tedious parts.</p>
+  <figure class="demo" data-gif="audio-tools" data-caption="Warm voice EQ, noise reduction and voice enhance, Remove silences, then Beats → markers on the music."></figure>
+  <h3>Audio tab</h3>
+  <div class="cols">
+    <div class="box"><h4>Equalizer</h4><p>Low, Mid, High (±24 dB) and presets: Warm voice, Radio, Crisp, Bass boost, Telephone, Flat.</p></div>
+    <div class="box"><h4>Processing</h4><p>Noise & hum reduction, Voice enhance, Compressor, Reverb, Echo.</p></div>
+  </div>
+  <h3>Smart tools</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Tool</th><th>What it does</th></tr>
+    <tr><td>✂ Remove silences</td><td>Cuts out the pauses in speech and closes the gaps. <b>Remove all silences</b> in the AI tab does every clip at once.</td></tr>
+    <tr><td>📶 Normalize loudness</td><td>Brings the clip to a consistent, broadcast-friendly level.</td></tr>
+    <tr><td>🎚 Auto-duck</td><td>Run it on the music: it's lowered automatically wherever someone speaks.</td></tr>
+    <tr><td>🥁 Beats → markers</td><td>Finds the beats of a song and adds a marker on each. Then <b>Cut on beats</b> (AI tab) splits a clip on every marker.</td></tr>
+    <tr><td>🔊 Detach audio</td><td>Puts a video's sound on its own track, so you can move or edit it separately.</td></tr>
+    <tr><td>🎞 Detect scenes</td><td>Marks every scene change in a video.</td></tr>
+  </table></div>
+  <p>These are also in the right-click menu under <b>Smart audio</b>. All of them run locally and need no AI.</p>
+</section>
+
+<section class="page" id="voiceover" data-group="Audio" data-title="Voice-over" data-icon="🎙">
+  <div class="kicker">Audio</div>
+  <h2>Record a voice-over</h2>
+  <p class="lead">Narrate while you watch, straight onto the timeline.</p>
+  <ol class="steps">
+    <li>Move the playhead to where the narration should start.</li>
+    <li>Open the <b>Audio</b> panel and click <b>⏺ Start recording</b>. The first time, allow microphone access.</li>
+    <li>Click <b>⏹ Stop recording</b>. The recording lands on an audio track at the playhead, ready to edit.</li>
+  </ol>
+  <div class="tip"><b>Clean it up.</b> Select the recording → Audio tab → <i>Warm voice</i> EQ, <i>Noise & hum reduction</i> and <i>Voice enhance</i>, then <i>Remove silences</i>.</div>
+  <p>Echo cancellation and noise suppression are on while recording. Export audio only as <b>MP3</b> or <b>WAV</b> from the Export dialog.</p>
+</section>
+
+<!-- ============================== AI ============================== -->
+
+<section class="page" id="ai" data-group="AI" data-title="AI assistant" data-icon="🤖">
+  <div class="kicker">AI</div>
+  <h2>The AI assistant</h2>
+  <p class="lead">Describe what you want in plain words, in any language, and the assistant edits your project. You see every change and can undo it in one step.</p>
+  <figure class="demo" data-gif="ai-assistant" data-caption="“Add a cinematic title that fades in with a slow zoom, a thin line under it, and a teal & orange look” (waiting sped up)."></figure>
+  <h3>What it can do</h3>
+  <div class="cols">
+    <div class="box"><h4>Create</h4><p>Titles, lower thirds, intros, shapes, color backgrounds and custom SVG stickers and icons.</p></div>
+    <div class="box"><h4>Animate</h4><p>Keyframes, in/out animations, motion presets, zoom & pan, splitting illustrations into animated parts.</p></div>
+    <div class="box"><h4>Edit</h4><p>Split, trim, move, delete, speed, transitions, effects, effect layers, looks, aspect ratio, markers.</p></div>
+    <div class="box"><h4>Audio</h4><p>Remove silences, auto-duck music, normalize, beats to markers, scene detection.</p></div>
+  </div>
+  <h3>Using it</h3>
+  <ul>
+    <li>Type in the box and press <kbd>Enter</kbd> (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). Or click a quick prompt: Intro, Lower third, Color grade, Kinetic text, Subscribe button, Make it a Reel, Quick edit, Music.</li>
+    <li><b>Send frame</b> lets the AI see the current preview frame, for color and composition.</li>
+    <li><b>Fast / Balanced / Thorough</b> sets how hard the model thinks.</li>
+    <li>Select clips first to say “this clip”. The assistant knows your tracks, clips, media and presets.</li>
+    <li>Each answer is one undo step: <kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> takes back everything it did. <b>New chat</b> starts over.</li>
+  </ul>
+  <h3>Prompts to try</h3>
+  <ul>
+    <li><i>“Make a cinematic 6-second intro titled ‘My Channel’ with animated shapes.”</i></li>
+    <li><i>“Add a lower third for ‘Alex Morgan — Director’ at the playhead.”</i></li>
+    <li><i>“Make it a vertical Reel and fill the frame with every clip.”</i></li>
+    <li><i>“Remove the silences and add short fades between the clips.”</i></li>
+    <li><i>“Zoom into the person's face at 3 seconds.”</i></li>
+    <li><i>“Put a red subscribe button with a bell in the bottom-right corner for 4 seconds.”</i></li>
+  </ul>
+  <div class="info"><b>No AI connected?</b> The assistant needs an AI service. See <a href="#ai-setup">Connect an AI</a>. Every other tool works without one.</div>
+</section>
+
+<section class="page" id="ai-setup" data-group="AI" data-title="Connect an AI" data-icon="🔌">
+  <div class="kicker">AI</div>
+  <h2>Connect an AI</h2>
+  <p class="lead">Open <b>⚙ Settings → AI assistant</b>, pick an option, and use <b>Test connection</b> before saving.</p>
+  <figure class="demo" data-gif="settings" data-caption="The AI settings: Claude subscription, API keys or a local model."></figure>
+  <div class="table-wrap"><table>
+    <tr><th>Option</th><th>What you need</th><th>Cost</th></tr>
+    <tr><td><b>Claude subscription</b></td><td>A Claude Pro or Max plan. Click <b>Set up</b>, then <b>Sign in with Claude</b>: the app installs Claude Code for you and signs in through your browser.</td><td>Included in your plan</td></tr>
+    <tr><td><b>Claude API</b></td><td>A key from <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a></td><td>Pay per use</td></tr>
+    <tr><td><b>ChatGPT / OpenAI</b></td><td>A key from <a href="https://platform.openai.com/api-keys">platform.openai.com</a></td><td>Pay per use</td></tr>
+    <tr><td><b>Google Gemini</b></td><td>A key from <a href="https://aistudio.google.com/apikey">Google AI Studio</a></td><td>Free tier available</td></tr>
+    <tr><td><b>OpenRouter</b></td><td>A key from <a href="https://openrouter.ai/keys">openrouter.ai</a>, one key for hundreds of models</td><td>Pay per use, some free models</td></tr>
+    <tr><td><b>Local AI</b></td><td><a href="https://ollama.com">Ollama</a> or <a href="https://lmstudio.ai">LM Studio</a> running on your computer</td><td>Free and fully private</td></tr>
+    <tr><td><b>Other service</b></td><td>Any OpenAI-compatible address (Groq, Mistral, DeepSeek, Together, your own server…)</td><td>Depends on the service</td></tr>
+  </table></div>
+  <ul>
+    <li>For each service you can choose the <b>model</b>. The <b>↻</b> button next to it loads the list of models your key can use.</li>
+    <li>Keys are saved only on your computer, readable only by your user account, and sent only to the service they belong to.</li>
+    <li>The assistant works best with capable models. Small local models handle simple requests.</li>
+  </ul>
+</section>
+
+<section class="page" id="subtitles" data-group="AI" data-title="Subtitles" data-icon="💬">
+  <div class="kicker">AI</div>
+  <h2>Subtitles</h2>
+  <p class="lead">Turn speech into timed captions, styled like any text, and export them as an SRT file.</p>
+  <figure class="demo" data-gif="ai-subtitles" data-caption="Pasting the script and letting the AI time it to the speech (waiting sped up)."></figure>
+  <h3>Two ways</h3>
+  <div class="cols">
+    <div class="box"><h4>Paste the script (AI)</h4><p>Select the clip with speech, paste what's said in the <b>Auto subtitles</b> box (AI tab) and click <b>Sync script to speech</b>. The app finds where speech happens and the AI splits your text into short captions timed to it.</p></div>
+    <div class="box"><h4>Automatic transcription</h4><p>With <a href="https://github.com/openai/whisper">Whisper</a> installed (<code>pip install openai-whisper</code>), choose the language and click <b>Transcribe & create captions</b>. It runs locally.</p></div>
+  </div>
+  <ul>
+    <li>Captions go on a <b>Captions</b> track. Edit their text, timing and style like any text clip, or save a style as a <a href="#presets">preset</a> and apply it to all of them.</li>
+    <li><b>Export SRT</b> saves a subtitle file for YouTube and other players.</li>
+  </ul>
+</section>
+
+<!-- ============================== FINISH ============================== -->
+
+<section class="page" id="presets" data-group="Finish" data-title="My presets" data-icon="★">
+  <div class="kicker">Finish</div>
+  <h2>My presets</h2>
+  <p class="lead">Set up one clip the way you like, save it, and apply it to any other clip, in any project.</p>
+  <figure class="demo" data-gif="presets" data-caption="Saving a clip's look as “My teal look” and applying it to two other clips at once."></figure>
+  <ol class="steps">
+    <li>Select the clip and click <b>Save as preset</b> at the top of the Inspector.</li>
+    <li>Name it and tick what to include. The parts you changed are ticked for you: color, effects, animation, size & position, crop, mask, audio, speed, text style.</li>
+    <li>To apply, select one or more clips and choose it from <b>★ My presets</b>. Only the saved parts change.</li>
+  </ol>
+  <p>The <b>⋯</b> button manages presets: rename, delete, export one or all to a <code>.nomadpreset.json</code> file to share, and import presets from others. The AI assistant can use your presets too: <i>“apply my teal look to all clips”</i>.</p>
+</section>
+
+<section class="page" id="export" data-group="Finish" data-title="Export" data-icon="📤">
+  <div class="kicker">Finish</div>
+  <h2>Export</h2>
+  <p class="lead">Click <b>Export</b>, choose the format and quality, and click <b>Render</b>. Rendering is faster than real time.</p>
+  <figure class="demo" data-gif="export" data-caption="Exporting an 8-second 1080p video with music and a transition."></figure>
+  <div class="table-wrap"><table>
+    <tr><th>Setting</th><th>Options</th></tr>
+    <tr><td>Format</td><td>MP4 (H.264), WebM (VP9), MOV, Animated GIF, MP3 (audio only), WAV (audio only)</td></tr>
+    <tr><td>Resolution</td><td>2× (for example 3840×2160), original, ⅔ or ½ of the project size</td></tr>
+    <tr><td>Quality</td><td>High, Medium, Small file</td></tr>
+    <tr><td>Range</td><td>Whole project, or only the selected clips</td></tr>
+  </table></div>
+  <h3>Why it's fast</h3>
+  <p>NomadMovie doesn't play the video back to record it. It decodes the source clips frame by frame, renders each frame on the GPU, encodes it with your computer's hardware video encoder, and mixes the audio separately. An 8-second 1080p video with music takes about 3 seconds on a 2019 Intel laptop. If hardware encoding isn't available, it falls back to real-time recording.</p>
+  <p>The desktop app asks where to save the file, starting in your Videos folder.</p>
+</section>
+
+<section class="page" id="projects" data-group="Finish" data-title="Projects & saving" data-icon="💾">
+  <div class="kicker">Finish</div>
+  <h2>Projects and saving</h2>
+  <ul>
+    <li><b>Autosave.</b> Your project and its media are saved automatically inside the app as you work, and come back when you reopen it.</li>
+    <li><b>Save</b> (top bar) downloads a <code>.nomad.json</code> project file: a backup of the edit you can open later with <b>Open</b>.</li>
+    <li>A project file holds the edit, not the media. When you open it on a computer that doesn't have the media yet, the app tells you how many clips are missing so you can re-import the files.</li>
+    <li><b>New</b> starts an empty project and clears the saved media.</li>
+  </ul>
+  <h3>Where things are stored</h3>
+  <div class="table-wrap"><table>
+    <tr><th>System</th><th>App data (projects, media, settings, presets)</th></tr>
+    <tr><td>macOS</td><td><code>~/Library/Application Support/NomadMovie</code></td></tr>
+    <tr><td>Windows</td><td><code>%APPDATA%\NomadMovie</code></td></tr>
+    <tr><td>Linux</td><td><code>~/.config/NomadMovie</code></td></tr>
+  </table></div>
+</section>
+
+<section class="page" id="shortcuts" data-group="Finish" data-title="Keyboard shortcuts" data-icon="⌨">
+  <div class="kicker">Finish</div>
+  <h2>Keyboard shortcuts</h2>
+  <p class="lead">On macOS use <kbd>⌘</kbd> where it says <kbd>Ctrl</kbd>.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Key</th><th>Action</th></tr>
+    <tr><td><kbd>Space</kbd></td><td>Play / pause</td></tr>
+    <tr><td><kbd>S</kbd></td><td>Split at the playhead</td></tr>
+    <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Delete selected clips</td></tr>
+    <tr><td><kbd>Shift</kbd>+<kbd>Delete</kbd></td><td>Ripple delete (close the gap)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> · <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Undo · Redo · Redo</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> · <kbd>Ctrl</kbd>+<kbd>X</kbd> · <kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Copy · Cut · Paste at the playhead</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Duplicate</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>A</kbd> · <kbd>Esc</kbd></td><td>Select all · Deselect</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>One frame back / forward</td></tr>
+    <tr><td><kbd>Shift</kbd>+<kbd>←</kbd> <kbd>→</kbd></td><td>One second back / forward</td></tr>
+    <tr><td><kbd>Home</kbd> · <kbd>End</kbd></td><td>Go to start · end</td></tr>
+    <tr><td><kbd>M</kbd></td><td>Add a marker</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Snapping on / off</td></tr>
+    <tr><td><kbd>+</kbd> · <kbd>-</kbd> · <kbd>Ctrl</kbd>+scroll</td><td>Timeline zoom</td></tr>
+    <tr><td><kbd>Enter</kbd> (AI box)</td><td>Send to the AI assistant</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================== HELP ============================== -->
+
+<section class="page" id="privacy" data-group="Help" data-title="Privacy & security" data-icon="🔒">
+  <div class="kicker">Help</div>
+  <h2>Privacy and security</h2>
+  <h3>Your data</h3>
+  <ul>
+    <li>Your media and projects stay on your computer. The app's engine only listens on your own machine (<code>127.0.0.1</code>).</li>
+    <li>When you use the AI assistant, a description of your project (and the current frame, if you turn on <b>Send frame</b>) goes to the AI service you chose. Nothing is sent with a local model.</li>
+    <li>AI cut-outs run entirely on your computer. Only the model is downloaded, once, from Hugging Face.</li>
+    <li>No analytics, no tracking, no account.</li>
+  </ul>
+  <h3>How the app protects you</h3>
+  <ul>
+    <li><b>The engine only answers the app.</b> Other websites open in your browser can't use it: requests from other sites and other host names are refused.</li>
+    <li><b>Safe import.</b> Files are read as local media only. Playlists or file lists that point to other files or web addresses are refused.</li>
+    <li><b>No code in files.</b> Lottie animations play without expressions, and SVG graphics are drawn as images, so scripts inside them never run.</li>
+    <li><b>Keys stay put.</b> API keys are saved in a file only your user account can read, and are only sent to the service they belong to.</li>
+    <li><b>Locked-down window.</b> The editor window is sandboxed with no system access, shows only the editor, and opens other links in your browser.</li>
+    <li><b>Up to date.</b> The app is built on a supported Electron/Chromium version, and dependencies are watched by Dependabot.</li>
+  </ul>
+  <p>Found a security problem? Please report it privately through <a href="https://github.com/faridmasjedi/NomadMovie/security/advisories/new">GitHub security advisories</a> instead of a public issue.</p>
+</section>
+
+<section class="page" id="faq" data-group="Help" data-title="Troubleshooting & FAQ" data-icon="❓">
+  <div class="kicker">Help</div>
+  <h2>Troubleshooting and FAQ</h2>
+  <h3>macOS says the app “can't be opened” or is “damaged”</h3>
+  <p>Right-click NomadMovie in Applications → <b>Open</b> → <b>Open</b>. If that doesn't show an Open button: <b>System Settings → Privacy & Security</b> → <b>Open Anyway</b>. This is needed once because the app isn't distributed through the App Store.</p>
+  <h3>Windows SmartScreen blocks the installer</h3>
+  <p>Click <b>More info → Run anyway</b>, or use the portable .zip.</p>
+  <h3>The AI pill in the top bar is grey</h3>
+  <p>No AI is connected yet. Click it (or ⚙ Settings) and follow <a href="#ai-setup">Connect an AI</a>. For the Claude subscription, click <b>Sign in with Claude</b> and finish the sign-in in your browser.</p>
+  <h3>“Whisper” is grey</h3>
+  <p>Automatic transcription is optional and needs <code>pip install openai-whisper</code>. Without it, paste the script and use <b>Sync script to speech</b>.</p>
+  <h3>A file won't import</h3>
+  <p>Almost every format is converted automatically. If one still fails, the message says why; the file may be damaged or protected (DRM). Converting it to MP4 elsewhere and importing that always works.</p>
+  <h3>AI cut-out is slow</h3>
+  <p>It's fastest on a GPU with WebGPU. On older computers, track <b>every 3rd</b> or <b>5th frame</b> instead of every frame. The outline is interpolated in between.</p>
+  <h3>Playback stutters</h3>
+  <p>Lower the <b>preview quality</b> (menu next to the volume in the preview). This doesn't affect the export.</p>
+  <h3>“Could not start the local engine on port 47821”</h3>
+  <p>Another copy of NomadMovie (or another program) is using that port. Quit other copies and start it again.</p>
+  <h3>Does it work offline?</h3>
+  <p>Yes. Everything except the online AI services works offline, including fonts and export. The AI cut-out model needs internet once to download.</p>
+  <h3>Is it really free?</h3>
+  <p>Yes: free and open source under the MIT license, with no watermark. AI services you connect may cost money; a local model or your existing Claude plan doesn't add anything.</p>
+  <h3>Something else?</h3>
+  <p><a href="https://github.com/faridmasjedi/NomadMovie/issues/new/choose">Open an issue on GitHub</a> with what you did, what happened and your system.</p>
+</section>
+
+<section class="page" id="source" data-group="Help" data-title="Build from source" data-icon="🛠">
+  <div class="kicker">Help</div>
+  <h2>Build from source and contribute</h2>
+  <p>You need <a href="https://nodejs.org">Node.js</a> 22 or newer.</p>
+  <pre style="background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto"><code style="background:none;padding:0">git clone https://github.com/faridmasjedi/NomadMovie.git
+cd NomadMovie
+npm install
+
+npm run dev        # run in the browser at http://localhost:5173, with hot reload
+npm run app        # build and open the desktop app
+npm run dist       # build an installer for your system into release/</code></pre>
+  <h3>How it's built</h3>
+  <p>React, TypeScript and Vite for the interface; a Canvas and WebGL compositor for rendering; Web Audio for sound; WebCodecs for fast export; Electron for the desktop app; and a small local Express engine with a bundled ffmpeg for conversion, export and AI calls.</p>
+  <h3>Contributing</h3>
+  <p>Contributions are welcome. Changes go through a pull request, must pass CI and are reviewed before merging. See <a href="https://github.com/faridmasjedi/NomadMovie/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+  <h3>Credits</h3>
+  <p>Demo footage on this site: <a href="https://mango.blender.org">Tears of Steel</a> (CC BY 3.0) © Blender Foundation | mango.blender.org. Transitions build on the open <a href="https://gl-transitions.com">gl-transitions</a> collection. AI cut-out uses <a href="https://huggingface.co/onnx-community/EdgeTAM-ONNX">EdgeTAM</a>.</p>
+</section>
+
+<footer>NomadMovie is free and open source under the MIT license. © Farid Masjedi · <a href="https://github.com/faridmasjedi/NomadMovie">GitHub</a> · Demo footage: Tears of Steel (CC BY 3.0) © Blender Foundation</footer>
+</main>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>
