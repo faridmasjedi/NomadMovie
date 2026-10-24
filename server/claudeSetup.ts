@@ -21,6 +21,12 @@ let proc: ChildProcessWithoutNullStreams | null = null;
 
 export const setupState = () => state;
 
+/** the last thing the tool printed, shown with an error so the reason is visible */
+const lastLine = (log?: string) => {
+  const l = (log ?? "").replace(/\x1b\[[0-9;]*m/g, "").trim().split("\n").pop()?.trim();
+  return l ? ` (${l.slice(0, 200)})` : "";
+};
+
 function run(cmd: string, args: string[], env: NodeJS.ProcessEnv, onOutput: (all: string) => void) {
   return new Promise<number>((resolve, reject) => {
     const p = spawn(cmd, args, { env, stdio: ["pipe", "pipe", "pipe"] });
@@ -52,7 +58,7 @@ export async function installClaude() {
     .then((code) => {
       resetClaudeCache();
       if (state.step !== "installing") return; // cancelled
-      state = code === 0 && findClaude() ? { step: "idle" } : { step: "error", error: "Installing Claude Code failed.", log: state.log };
+      state = code === 0 && findClaude() ? { step: "idle" } : { step: "error", error: `Installing Claude Code failed.${lastLine(state.log)}`, log: state.log };
     })
     .catch((e) => (state = { step: "error", error: `Could not run the installer: ${e instanceof Error ? e.message : e}` }));
   return state;
@@ -71,7 +77,7 @@ export async function startLogin() {
     .then((code) => {
       resetClaudeCache();
       if (state.step !== "signing-in") return; // cancelled
-      state = code === 0 ? { step: "done" } : { step: "error", error: "Sign-in didn't finish. Try again.", log: state.log };
+      state = code === 0 ? { step: "done" } : { step: "error", error: `Sign-in didn't finish. Try again.${lastLine(state.log)}`, log: state.log };
     })
     .catch((e) => (state = { step: "error", error: `Could not start the sign-in: ${e instanceof Error ? e.message : e}` }));
   // give it a moment to print the sign-in link

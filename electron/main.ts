@@ -238,6 +238,7 @@ async function pageChecks() {
   r.desktopBridge = typeof (window as unknown as { nomadDesktop?: unknown }).nomadDesktop === "object";
   const h = await (await fetch("/api/health")).json();
   r.ffmpeg = h.ffmpeg;
+  r.ai = h.ai ? h.providerLabel : `not connected (${h.provider}${h.claudeCode ? `, Claude Code ${h.claudeCode.found ? "found" : "not found"}` : ""})`;
   r.webgl = !!document.createElement("canvas").getContext("webgl2");
   r.videoEncoder = typeof VideoEncoder === "function";
   // a 1-second tone goes through the engine's converter: upload → ffmpeg → download
