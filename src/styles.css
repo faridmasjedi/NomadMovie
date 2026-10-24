@@ -74,6 +74,9 @@ input[type="range"] { accent-color: var(--accent); min-width: 0; direction: ltr;
 /* desktop app: the top bar is the window's title bar */
 html[data-desktop] .topbar { -webkit-app-region: drag; user-select: none; }
 html[data-desktop] .topbar :is(button, input, select, .status-pill b) { -webkit-app-region: no-drag; }
+/* dialogs opened from the top bar (Settings, Export…) live inside it in the page: they must never drag the window,
+   or clicks on their text and links would start a window drag instead */
+html[data-desktop] .topbar :is(.modal-back, .modal-back *) { -webkit-app-region: no-drag; }
 html[data-desktop="darwin"] .topbar { padding-left: 84px; }
 html[data-desktop="win32"] .topbar { padding-right: 148px; }
 .logo { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; margin-inline-end: 8px; }
