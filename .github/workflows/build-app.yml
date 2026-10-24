@@ -112,20 +112,25 @@ jobs:
         env:
           APP: ${{ matrix.smoke }}
         run: |
+          # the app gets a native path; this shell checks the same file through its own path form (Windows: D:\… → /d/…)
           out="$RUNNER_TEMP/smoke.json"
-          rm -f "$out"
+          check="$out"; log="$RUNNER_TEMP/smoke.log"
+          if [ "$RUNNER_OS" = Windows ]; then check="$(cygpath -u "$out")"; log="$(cygpath -u "$log")"; fi
+          rm -f "$check"
+          export ELECTRON_ENABLE_LOGGING=1
           # CI machines have no GPU: allow software WebGL. The app writes its result and quits by itself
           # (after 150 s at most); we wait for the result file rather than for the process.
           case "$RUNNER_OS" in
-            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" & ;;
-            Windows) "$APP" --enable-unsafe-swiftshader --smoke-test="$out" & ;;
-            *) "$APP" --smoke-test="$out" & ;;
+            Linux) xvfb-run -a "$APP" --no-sandbox --enable-unsafe-swiftshader --smoke-test="$out" >"$log" 2>&1 & ;;
+            Windows) "$APP" --enable-unsafe-swiftshader --smoke-test="$out" >"$log" 2>&1 & ;;
+            *) "$APP" --smoke-test="$out" >"$log" 2>&1 & ;;
           esac
-          for i in $(seq 1 240); do [ -s "$out" ] && break; sleep 1; done
+          for i in $(seq 1 240); do [ -s "$check" ] && break; sleep 1; done
           sleep 2
           kill $! 2>/dev/null || true
-          if [ ! -s "$out" ]; then echo "::error::The app wrote no result within 4 minutes"; exit 1; fi
-          cat "$out"
+          echo "--- app log (last lines) ---"; tail -n 40 "$log" 2>/dev/null || true
+          if [ ! -s "$check" ]; then echo "::error::The app wrote no result within 4 minutes"; exit 1; fi
+          echo "--- result ---"; cat "$check"
           node -e "process.exit(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).ok ? 0 : 1)" "$out"
       - uses: actions/upload-artifact@v4
         with:
