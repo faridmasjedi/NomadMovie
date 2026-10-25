@@ -79,7 +79,10 @@ const unique = [...new Map(packages.map((p) => [`${p.name}@${p.version}`, p])).v
 
 const ffmpeg = JSON.parse(fs.readFileSync(path.join(root, "node_modules/ffmpeg-static/package.json"), "utf8"));
 const ffmpegTag = ffmpeg["ffmpeg-static"]?.["binary-release-tag"] ?? "";
-const ffmpegLicense = fs.readFileSync(path.join(root, "node_modules/ffmpeg-static/ffmpeg.LICENSE"), "utf8").trim();
+// next to the binary: ffmpeg.LICENSE, or ffmpeg.exe.LICENSE on Windows
+const ffmpegDir = path.join(root, "node_modules/ffmpeg-static");
+const ffmpegLicenseFile = fs.readdirSync(ffmpegDir).find((f) => /^ffmpeg(\.exe)?\.LICENSE$/i.test(f));
+const ffmpegLicense = ffmpegLicenseFile ? fs.readFileSync(path.join(ffmpegDir, ffmpegLicenseFile), "utf8").trim() : "See https://ffmpeg.org/legal.html";
 
 let md = `# Third-party notices
 
