@@ -40,14 +40,14 @@
 <section class="page" id="overview" data-group="Get started" data-title="Overview" data-icon="🏠">
   <div class="hero">
     <div>
-      <div class="kicker">Free · open source · macOS, Windows, Linux</div>
+      <div class="kicker"><span class="beta-badge">Public beta</span> Free · open source · macOS, Windows, Linux</div>
       <h1>Edit like a pro. Let AI do the boring parts.</h1>
       <p class="lead">NomadMovie is a desktop video editor with a multi-track timeline, After Effects-style animation, one-click AI cut-outs and an AI assistant that edits your project when you describe what you want.</p>
       <div class="actions">
         <a class="btn primary big" data-best-download href="#download">⬇ Download <span class="os"></span></a>
         <a class="btn big" href="#first-video">Read the guide</a>
       </div>
-      <div class="note">Version <span data-version>latest</span> · MIT license · your footage never leaves your computer</div>
+      <div class="note">Version <span data-version>latest</span> (beta) · MIT license · your footage never leaves your computer</div>
     </div>
     <figure class="demo" data-gif="hero" data-caption="A quick tour: titles, transitions, effects, animation and AI cut-outs."></figure>
   </div>
@@ -98,6 +98,7 @@
   <div class="kicker">Get started</div>
   <h2>Download & install</h2>
   <p class="lead">Version <b data-version>latest</b> <span data-release-date></span>. Pick your system. Your system is highlighted.</p>
+  <div class="info"><b>Public beta.</b> NomadMovie is ready to use, and we're polishing it with feedback from early users. If something doesn't work, please <a href="https://github.com/faridmasjedi/NomadMovie/issues/new/choose">report it on GitHub</a>: it helps a lot. The app updates itself as fixes come out.</div>
   <div class="dl-grid" data-downloads><div class="dl"><a class="file" href="https://github.com/faridmasjedi/NomadMovie/releases/latest">⬇ Open the latest release on GitHub</a></div></div>
 
   <h3>macOS</h3>
@@ -810,6 +811,8 @@ npm run dist       # build an installer for your system into release/</code></pr
   <p>React, TypeScript and Vite for the interface; a Canvas and WebGL compositor for rendering; Web Audio for sound; WebCodecs for fast export; Electron for the desktop app; and an engine with a bundled ffmpeg for conversion, export and AI calls. In the desktop app the window reaches the engine through Electron and a private socket, so nothing listens on the network.</p>
   <h3>Contributing</h3>
   <p>Contributions are welcome. Changes go through a pull request, must pass CI and are reviewed before merging. See <a href="https://github.com/faridmasjedi/NomadMovie/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+  <h3>Licenses</h3>
+  <p>NomadMovie is free software under the <a href="https://github.com/faridmasjedi/NomadMovie/blob/main/LICENSE">MIT license</a>. It includes other open-source software under its own licenses, most notably <b>FFmpeg</b>, which is licensed under the GNU GPL version 3 and runs as a separate program for converting and exporting media. The complete list, with every license text and where to get FFmpeg's source code, is in <a href="https://github.com/faridmasjedi/NomadMovie/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>, and in the app under <b>Help → Third-Party Licenses</b>.</p>
   <h3>Credits</h3>
   <p>Demo footage on this site: <a href="https://mango.blender.org">Tears of Steel</a> (CC BY 3.0) © Blender Foundation | mango.blender.org. Transitions build on the open <a href="https://gl-transitions.com">gl-transitions</a> collection. AI cut-out uses <a href="https://huggingface.co/onnx-community/EdgeTAM-ONNX">EdgeTAM</a>.</p>
 </section>

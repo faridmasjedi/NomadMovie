@@ -87,6 +87,8 @@ jobs:
           npm version "$v" --no-git-tag-version --allow-same-version
       - run: npm run build
       - run: npm run build:electron
+      # the license notices shipped in the app list exactly what this build contains
+      - run: npm run licenses
       - name: Package
         shell: bash
         env:

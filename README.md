@@ -4,7 +4,7 @@
 
 # NomadMovie
 
-**A free, open-source video editor with AI built in.**
+**A free, open-source video editor with AI built in.** *(public beta)*
 Edit on a multi-track timeline, animate titles like in After Effects, cut people out of a shot with one click,
 and let an AI assistant do the tedious parts — with the AI you already use.
 
@@ -134,3 +134,5 @@ src/components/          interface: timeline, preview, inspector, panels
 ## License
 
 [MIT](LICENSE) © Farid Masjedi
+
+NomadMovie includes other open-source software under its own licenses, notably FFmpeg (GNU GPL v3), which runs as a separate program. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) (regenerate with `npm run licenses`), also available in the app under **Help → Third-Party Licenses**.

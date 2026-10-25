@@ -8,10 +8,12 @@
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc --noEmit",
+    "licenses": "node scripts/licenses.mjs",
     "build:electron": "esbuild electron/main.ts --bundle --platform=node --format=esm --packages=external --target=node20 --outfile=dist-electron/main.mjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --external:electron --target=node20 --outfile=dist-electron/preload.cjs",
     "app": "npm run build && npm run build:electron && electron .",
     "dist": "npm run build && npm run build:electron && electron-builder --publish never",
-    "dist:mac": "npm run build && npm run build:electron && electron-builder --mac --publish never"
+    "dist:mac": "npm run build && npm run build:electron && electron-builder --mac --publish never",
+    "demos": "node tools/demos/demos.mjs && node tools/demos/finish.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
@@ -40,6 +42,7 @@
     "lottie-web": "^5.13.0",
     "mp4-muxer": "^5.1.5",
     "mp4box": "^0.5.3",
+    "puppeteer-core": "^23.10.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tsx": "^4.23.15",
@@ -125,6 +128,16 @@
         "provider": "github",
         "owner": "faridmasjedi",
         "repo": "NomadMovie"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.txt"
       }
     ]
   },

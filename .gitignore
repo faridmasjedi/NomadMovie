@@ -4,3 +4,4 @@ dist-electron
 release
 .env
 .DS_Store
+tools/demos/work/
