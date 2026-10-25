@@ -61,7 +61,7 @@ jobs:
             args: --linux --x64
             smoke: release/linux-unpacked/nomadmovie
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - uses: actions/setup-node@v4
