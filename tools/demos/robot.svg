@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fd8ff"/><stop offset="1" stop-color="#4a7bd8"/></linearGradient>
+    <linearGradient id="dark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b5f97"/><stop offset="1" stop-color="#2d2f5e"/></linearGradient>
+  </defs>
+  <g id="left-arm"><rect x="70" y="215" width="44" height="130" rx="22" fill="url(#dark)"/><circle cx="92" cy="352" r="24" fill="#ffb347"/></g>
+  <g id="right-arm"><rect x="286" y="215" width="44" height="130" rx="22" fill="url(#dark)"/><circle cx="308" cy="352" r="24" fill="#ffb347"/></g>
+  <g id="legs"><rect x="140" y="380" width="44" height="100" rx="16" fill="url(#dark)"/><rect x="216" y="380" width="44" height="100" rx="16" fill="url(#dark)"/></g>
+  <g id="body"><rect x="110" y="200" width="180" height="190" rx="40" fill="url(#metal)"/><circle cx="200" cy="285" r="34" fill="#ff5f8f"/><circle cx="200" cy="285" r="16" fill="#ffe0ea"/></g>
+  <g id="head"><rect x="120" y="60" width="160" height="130" rx="44" fill="url(#metal)"/><circle cx="168" cy="125" r="18" fill="#1b1d3a"/><circle cx="232" cy="125" r="18" fill="#1b1d3a"/><circle cx="174" cy="119" r="6" fill="#fff"/><circle cx="238" cy="119" r="6" fill="#fff"/><rect x="176" y="156" width="48" height="10" rx="5" fill="#1b1d3a"/></g>
+  <g id="antenna"><rect x="196" y="22" width="8" height="42" fill="#2d2f5e"/><circle cx="200" cy="20" r="14" fill="#ffd34d"/></g>
+</svg>

@@ -142,6 +142,10 @@ function registerSaving(allowSavePath: (p: string) => void) {
   });
 }
 
+/** files shipped next to the app (licenses); in development they're in the project folder */
+const resourceFile = (name: string) =>
+  app.isPackaged ? path.join(process.resourcesPath, name) : path.join(app.getAppPath(), name === "LICENSE.txt" ? "LICENSE" : name);
+
 /** the engine talks to the window over a private socket (a named pipe on Windows), protected by a random token */
 function privateSocket() {
   const id = `nomadmovie-${process.pid}-${randomBytes(6).toString("hex")}`;
@@ -186,6 +190,16 @@ app.whenReady().then(async () => {
       { label: "Edit", submenu: [{ role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }] },
       { role: "viewMenu" },
       { role: "windowMenu" },
+      {
+        role: "help",
+        submenu: [
+          { label: "NomadMovie Guide", click: () => shell.openExternal("https://faridmasjedi.github.io/NomadMovie/") },
+          { label: "Report a Problem…", click: () => shell.openExternal("https://github.com/faridmasjedi/NomadMovie/issues/new/choose") },
+          { type: "separator" },
+          { label: "Third-Party Licenses", click: () => shell.openPath(resourceFile("THIRD_PARTY_NOTICES.md")) },
+          { label: "NomadMovie License", click: () => shell.openPath(resourceFile("LICENSE.txt")) },
+        ],
+      },
     ]),
   );
 
